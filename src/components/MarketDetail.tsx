@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Button } from "./ui/button";
 import { ArrowLeft, Star } from "lucide-react";
-import { TradingView } from "./TradingView";
+import {TradingView} from "./TradingView";
 import { IndexView } from "./IndexView";
 
 interface MarketDetailProps {
