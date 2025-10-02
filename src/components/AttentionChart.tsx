@@ -1,22 +1,35 @@
-import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, Legend } from "recharts";
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip } from "recharts";
+import { AttentionDataPoint } from "../services/twitterApi";
+
+interface ChartDataPoint {
+  day: string;
+  score: number;
+  tweet_count?: number;
+  timestamp?: string;
+  hasEvent: boolean;
+  eventData: { name: string; impact: string } | null;
+}
 
 interface AttentionChartProps {
   market: {
+    id?: string;
     name: string;
     price: number;
   };
-  events: Array<{
+  events?: Array<{
     date: string;
     event: string;
     impact: string;
     description: string;
   }>;
+  realTimeData?: AttentionDataPoint[];
+  isRealTimeMode?: boolean;
 }
 
-export function AttentionChart({ market, events }: AttentionChartProps) {
-  // Generate attention score data for the past week
-  const generateAttentionData = () => {
-    const data = [];
+export function AttentionChart({ market, events = [], realTimeData = [], isRealTimeMode = false }: AttentionChartProps) {
+  // Generate fake attention score data for non-real-time markets
+  const generateFakeAttentionData = (): ChartDataPoint[] => {
+    const data: ChartDataPoint[] = [];
     const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
     let baseScore = market.price - 100;
     
@@ -26,24 +39,23 @@ export function AttentionChart({ market, events }: AttentionChartProps) {
       const trendGrowth = index * 10; // General upward trend
       const score = baseScore + trendGrowth + volatility;
       
-      // Add events on specific days
+      // Add events on specific days for fake data only
       let hasEvent = false;
       let eventData = null;
       
-      if (index === 2) { // Wednesday - Viral TikTok
-        hasEvent = true;
-        eventData = { name: "Viral TikTok", impact: "+8.7%" };
-      } else if (index === 5) { // Saturday - Album announcement
-        hasEvent = true;
-        eventData = { name: "Album Release", impact: "+15.2%" };
+      if (!isRealTimeMode) {
+        if (index === 2) { // Wednesday - Viral TikTok
+          hasEvent = true;
+          eventData = { name: "Viral TikTok", impact: "+8.7%" };
+        } else if (index === 5) { // Saturday - Album announcement
+          hasEvent = true;
+          eventData = { name: "Album Release", impact: "+15.2%" };
+        }
       }
       
       data.push({
         day,
         score: Math.round(score),
-        socialMedia: Math.round(score * 0.4),
-        searchVolume: Math.round(score * 0.3),
-        mediaChatter: Math.round(score * 0.3),
         hasEvent,
         eventData
       });
@@ -54,7 +66,32 @@ export function AttentionChart({ market, events }: AttentionChartProps) {
     return data;
   };
 
-  const data = generateAttentionData();
+  // Transform real-time Twitter data to chart format
+  const transformRealTimeData = (data: AttentionDataPoint[]): ChartDataPoint[] => {
+    return data.map((point) => {
+      const date = new Date(point.timestamp);
+      const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
+      const timeLabel = date.toLocaleTimeString('en-US', { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        hour12: false 
+      });
+      
+      return {
+        day: `${dayName} ${timeLabel}`,
+        score: point.attention_score,
+        tweet_count: point.tweet_count,
+        timestamp: point.timestamp,
+        hasEvent: false, // No events for real-time data
+        eventData: null
+      };
+    });
+  };
+
+  // Use real-time data if available and in real-time mode, otherwise use fake data
+  const chartData = isRealTimeMode && realTimeData.length > 0 
+    ? transformRealTimeData(realTimeData)
+    : generateFakeAttentionData();
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
@@ -68,16 +105,6 @@ export function AttentionChart({ market, events }: AttentionChartProps) {
             <p className="text-blue-600">
               <span className="font-medium">{data.score || 0}</span>
             </p>
-            {/*
-            <p className="text-green-600">
-              Social Media: <span className="font-medium">{data.socialMedia || 0}</span>
-            </p>
-            <p className="text-purple-600">
-              Search Volume: <span className="font-medium">{data.searchVolume || 0}</span>
-            </p>
-            <p className="text-orange-600">
-              Media Chatter: <span className="font-medium">{data.mediaChatter || 0}</span>
-            </p>*/}
             {data.hasEvent && data.eventData && (
               <div className="mt-2 pt-2 border-t border-gray-200">
                 <p className="font-medium text-red-600">{data.eventData.name}</p>
@@ -93,13 +120,13 @@ export function AttentionChart({ market, events }: AttentionChartProps) {
 
   const EventDot = (props: any) => {
     const { cx, cy, payload } = props;
-    if (!payload || !payload.hasEvent) return null;
+    if (!payload || !payload.hasEvent || isRealTimeMode) return null; // No event dots for real-time data
     
     return (
       <g>
         <circle 
           cx={cx} 
-          cy={cy } 
+          cy={cy} 
           r={6} 
           fill="#ef4444" 
           stroke="#ffffff" 
@@ -122,7 +149,7 @@ export function AttentionChart({ market, events }: AttentionChartProps) {
   return (
     <div className="h-80 w-full">
       <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 0 }}>
+        <LineChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 0 }}>
           <XAxis 
             dataKey="day" 
             axisLine={false}
@@ -147,46 +174,17 @@ export function AttentionChart({ market, events }: AttentionChartProps) {
             activeDot={{ r: 6, stroke: '#3b82f6', strokeWidth: 2 }}
           />
           
-          {/*
-          <Line 
-            type="monotone" 
-            dataKey="socialMedia" 
-            stroke="#16a34a" 
-            strokeWidth={2}
-            name="Social Media"
-            strokeDasharray="5 5"
-            dot={false}
-          />
-          
-          <Line 
-            type="monotone" 
-            dataKey="searchVolume" 
-            stroke="#9333ea" 
-            strokeWidth={2}
-            name="Search Volume"
-            strokeDasharray="5 5"
-            dot={false}
-          />
-          
-          <Line 
-            type="monotone" 
-            dataKey="mediaChatter" 
-            stroke="#ea580c" 
-            strokeWidth={2}
-            name="Media Chatter"
-            strokeDasharray="5 5"
-            dot={false}
-          />*/}
-          
-          {/* Event markers - simplified approach */}
-          <Line 
-            type="monotone" 
-            dataKey="score" 
-            stroke="transparent"
-            dot={(props) => <EventDot {...props} />}
-            line={false}
-            connectNulls={false}
-          />
+          {/* Event markers - only for fake data */}
+          {!isRealTimeMode && (
+            <Line 
+              type="monotone" 
+              dataKey="score" 
+              stroke="transparent"
+              dot={(props) => <EventDot {...props} />}
+              activeDot={false}
+              connectNulls={false}
+            />
+          )}
         </LineChart>
       </ResponsiveContainer>
     </div>

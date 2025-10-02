@@ -1,8 +1,10 @@
 import { Card } from "./ui/card";
 import { Badge } from "./ui/badge";
-import { TrendingUp, TrendingDown, ExternalLink, Calendar } from "lucide-react";
+import { Button } from "./ui/button";
+import { TrendingUp, TrendingDown, ExternalLink, Calendar, RefreshCw } from "lucide-react";
 import { AttentionChart } from "./AttentionChart";
 import { AttentionSources } from "./AttentionSources";
+import { useAttentionData, useFormattedTimeRemaining } from "../hooks/useAttentionData";
 
 interface IndexViewProps {
   market: {
@@ -17,6 +19,25 @@ interface IndexViewProps {
 }
 
 export function IndexView({ market }: IndexViewProps) {
+  // Check if this is LeBron James market for real-time data
+  const isLeBronJames = market.id === 'lebron-james';
+  
+  // Use real-time data hook for LeBron James
+  const {
+    data: attentionData,
+    loading,
+    error,
+    lastUpdated,
+    nextUpdateIn,
+    canUpdate,
+    forceUpdate
+  } = useAttentionData({
+    marketId: market.id,
+    marketName: market.name,
+    isRealTimeMode: isLeBronJames
+  });
+
+  const timeRemainingText = useFormattedTimeRemaining(nextUpdateIn);
   const mockNews = [
     {
       id: 1,
@@ -89,31 +110,91 @@ export function IndexView({ market }: IndexViewProps) {
       <div className="col-span-8 row-span-1">
         <Card className="flex flex-col h-full p-4">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold">Attention Over Time</h3>
+            <div className="flex items-center gap-3">
+              <h3 className="font-semibold">
+                Attention Over Time
+                {isLeBronJames && (
+                  <Badge variant="outline" className="ml-2 text-green-600">
+                    Real-time
+                  </Badge>
+                )}
+              </h3>
+              {loading && (
+                <RefreshCw className="w-4 h-4 animate-spin text-blue-600" />
+              )}
+            </div>
+            
             <div className="flex items-center gap-2">
+              {isLeBronJames && (
+                <div className="flex items-center gap-2 mr-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={forceUpdate}
+                    disabled={!canUpdate || loading}
+                    className="text-xs"
+                  >
+                    <RefreshCw className={`w-3 h-3 mr-1 ${loading ? 'animate-spin' : ''}`} />
+                    {canUpdate ? 'Update Now' : `${timeRemainingText}`}
+                  </Button>
+                  {lastUpdated && (
+                    <span className="text-xs text-gray-500">
+                      Updated: {new Date(lastUpdated).toLocaleTimeString()}
+                    </span>
+                  )}
+                </div>
+              )}
               <button className="px-3 py-1 text-sm bg-blue-600 text-white rounded">7D</button>
               <button className="px-3 py-1 text-sm bg-gray-100 text-gray-600 rounded">30D</button>
               <button className="px-3 py-1 text-sm bg-gray-100 text-gray-600 rounded">90D</button>
             </div>
           </div>
           
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-sm text-red-700">{error}</p>
+            </div>
+          )}
+          
           <div className="flex-1">
-            <AttentionChart market={market} events={mockEvents} />
+            <AttentionChart 
+              market={market} 
+              events={mockEvents}
+              realTimeData={attentionData}
+              isRealTimeMode={isLeBronJames}
+            />
           </div>
           
           {/* Stats bar at bottom */}
           <div className="mt-4 grid grid-cols-4 gap-4 pt-4 border-t">
             <div className="text-center">
-              <p className="text-lg font-bold text-gray-900">{market.spot_price.toFixed(0)}</p>
+              <p className="text-lg font-bold text-gray-900">
+                {isLeBronJames && attentionData.length > 0 
+                  ? attentionData[attentionData.length - 1]?.attention_score || 0
+                  : market.spot_price.toFixed(0)
+                }
+              </p>
               <p className="text-xs text-gray-500">Current Score</p>
             </div>
             <div className="text-center">
-              <p className="text-lg font-bold text-gray-900">1,247</p>
-              <p className="text-xs text-gray-500">Peak (30d)</p>
+              <p className="text-lg font-bold text-gray-900">
+                {isLeBronJames && attentionData.length > 0
+                  ? Math.max(...attentionData.map(d => d.attention_score))
+                  : '1,247'
+                }
+              </p>
+              <p className="text-xs text-gray-500">Peak (7d)</p>
             </div>
             <div className="text-center">
-              <p className="text-lg font-bold text-green-600">+23.4%</p>
-              <p className="text-xs text-gray-500">24h</p>
+              <p className="text-lg font-bold text-green-600">
+                {isLeBronJames && attentionData.length > 0 
+                  ? `${attentionData.length} pts`
+                  : '+23.4%'
+                }
+              </p>
+              <p className="text-xs text-gray-500">
+                {isLeBronJames ? 'Data Points' : '24h'}
+              </p>
             </div>
             <div className="text-center">
               <p className="text-lg font-bold text-gray-900">#12</p>

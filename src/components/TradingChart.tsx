@@ -76,6 +76,11 @@ const TradingChart: React.FC<TradingChartProps> = ({
   const candles = useMemo(() => genMockCandles(), []);
   const volumes = useMemo(() => genMockVolume(candles), [candles]);
 
+  const visible = 0.1; // show last 30%
+  const total = candles.length;
+  const from = candles[Math.floor(total * (1 - visible))].time;
+  const to = candles[total - 1].time;
+
   // create / recreate chart if theme or height changes
   useEffect(() => {
     if (!hostRef.current) return;
@@ -99,7 +104,7 @@ const TradingChart: React.FC<TradingChartProps> = ({
 
     chartRef.current = chart;
 
-    const ro = new ResizeObserver(() => chart.timeScale().fitContent());
+    const ro = new ResizeObserver(() => chart.timeScale().setVisibleRange({ from, to }));
     ro.observe(hostRef.current);
 
     return () => {
@@ -188,7 +193,7 @@ const TradingChart: React.FC<TradingChartProps> = ({
       volumeRef.current = vol;
     }
 
-    chart.timeScale().fitContent();
+    chart.timeScale().setVisibleRange({ from, to });
   }, [kind, showVolume, candles, volumes]);
 
   return (
