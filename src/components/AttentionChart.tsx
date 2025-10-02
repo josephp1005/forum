@@ -98,7 +98,7 @@ export function AttentionChart({ market, events }: AttentionChartProps) {
       <g>
         <circle 
           cx={cx} 
-          cy={cy - 10} 
+          cy={cy } 
           r={6} 
           fill="#ef4444" 
           stroke="#ffffff" 
@@ -121,12 +121,13 @@ export function AttentionChart({ market, events }: AttentionChartProps) {
   return (
     <div className="h-80 w-full">
       <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+        <LineChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 0 }}>
           <XAxis 
             dataKey="day" 
             axisLine={false}
             tickLine={false}
             tick={{ fontSize: 12, fill: '#6b7280' }}
+            dy={10}
           />
           <YAxis 
             axisLine={false}
@@ -134,7 +135,6 @@ export function AttentionChart({ market, events }: AttentionChartProps) {
             tick={{ fontSize: 12, fill: '#6b7280' }}
           />
           <Tooltip content={<CustomTooltip />} />
-          <Legend />
           
           <Line 
             type="monotone" 
@@ -146,6 +146,7 @@ export function AttentionChart({ market, events }: AttentionChartProps) {
             activeDot={{ r: 6, stroke: '#3b82f6', strokeWidth: 2 }}
           />
           
+          {/*
           <Line 
             type="monotone" 
             dataKey="socialMedia" 
@@ -174,7 +175,7 @@ export function AttentionChart({ market, events }: AttentionChartProps) {
             name="Media Chatter"
             strokeDasharray="5 5"
             dot={false}
-          />
+          />*/}
           
           {/* Event markers - simplified approach */}
           <Line 

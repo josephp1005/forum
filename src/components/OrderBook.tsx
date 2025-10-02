@@ -1,8 +1,9 @@
 interface OrderBookProps {
+  spread: number;
   currentPrice: number;
 }
 
-export function OrderBook({ currentPrice }: OrderBookProps) {
+export function OrderBook({ spread, currentPrice }: OrderBookProps) {
   // Generate mock order book data
   const generateOrderBookData = () => {
     const asks = [];
@@ -72,43 +73,45 @@ export function OrderBook({ currentPrice }: OrderBookProps) {
   };
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="grid grid-cols-3 gap-2 text-xs font-medium text-gray-500 px-2">
+    <div className="h-full flex flex-col">
+      {/* Header - sticky */}
+      <div className="grid grid-cols-3 gap-2 text-xs font-medium text-gray-500 px-2 py-2 bg-white sticky top-0 border-b">
         <span>Price</span>
         <span className="text-right">Size</span>
         <span className="text-right">Total</span>
       </div>
       
-      {/* Asks (Sell orders) */}
-      <div className="space-y-0.5">
-        {asks.map((ask, index) => (
-          <OrderRow 
-            key={`ask-${index}`} 
-            order={ask} 
-            type="ask" 
-            maxTotal={maxTotal}
-          />
-        ))}
-      </div>
-      
-      {/* Current Price */}
-      <div className="flex items-center justify-center py-2 bg-gray-100 rounded">
-        <span className="text-lg font-bold text-gray-900">
-          ${currentPrice.toFixed(2)}
-        </span>
-      </div>
-      
-      {/* Bids (Buy orders) */}
-      <div className="space-y-0.5">
-        {bids.map((bid, index) => (
-          <OrderRow 
-            key={`bid-${index}`} 
-            order={bid} 
-            type="bid" 
-            maxTotal={maxTotal}
-          />
-        ))}
+      <div className="flex-1 overflow-y-auto">
+        {/* Asks (Sell orders) */}
+        <div className="space-y-0.5 py-2">
+          {asks.map((ask, index) => (
+            <OrderRow 
+              key={`ask-${index}`} 
+              order={ask} 
+              type="ask" 
+              maxTotal={maxTotal}
+            />
+          ))}
+        </div>
+        
+        {/* Spread */}
+        <div className="flex items-center justify-center py-2 bg-gray-100 rounded mx-2 my-1">
+          <span className="text-lg font-bold text-gray-900">
+            Spread: ${spread.toFixed(2)}
+          </span>
+        </div>
+        
+        {/* Bids (Buy orders) */}
+        <div className="space-y-0.5 py-2">
+          {bids.map((bid, index) => (
+            <OrderRow 
+              key={`bid-${index}`} 
+              order={bid} 
+              type="bid" 
+              maxTotal={maxTotal}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );

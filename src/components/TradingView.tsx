@@ -28,7 +28,6 @@ export function TradingView({ market }: TradingViewProps) {
   const [amount, setAmount] = useState("");
   const [price, setPrice] = useState("");
 
-  // new: chart controls (kept minimal, inline with your header)
   const [chartKind, setChartKind] = useState<ChartKind>("candlestick");
   const [showVolume, setShowVolume] = useState(true);
 
@@ -38,6 +37,9 @@ export function TradingView({ market }: TradingViewProps) {
     { time: "14:31:58", price: 847.15, amount: 15.7, side: "buy" },
     { time: "14:31:34", price: 846.87, amount: 22.1, side: "sell" },
     { time: "14:31:11", price: 847.25, amount: 5.8, side: "buy" },
+    { time: "14:33:01", price: 847.41, amount: 9.3, side: "buy" },
+    { time: "14:33:15", price: 847.39, amount: 11.0, side: "sell" },
+    { time: "14:33:28", price: 847.55, amount: 14.2, side: "buy" },
   ];
 
   const mockPositions = [
@@ -45,115 +47,176 @@ export function TradingView({ market }: TradingViewProps) {
   ];
 
   return (
-    <div className="grid grid-cols-12 gap-6 h[calc(100vh-200px)]">
-      {/* Left side - Chart and trades */}
-      <div className="col-span-8 flex flex-col gap-6">
-        {/* Chart */}
-        <Card className="flex-1 p-4">
+    // Main grid container defining the overall layout structure
+    <div className="grid grid-cols-12 grid-rows-[1fr_auto] mb-2 gap-1 p-0 min-h-[calc(100vh-80px)]">
+      
+      {/* 1. Price Chart (Top-Left) */}
+      <div className="col-span-6 row-span-1">
+        <Card className="flex flex-col h-full p-4">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-4">
               <h3 className="font-semibold">Price Chart</h3>
-
-              {/* new: chart-type switcher (small, inline) */}
               <div className="ml-2 flex items-center gap-1 rounded-lg border px-2 py-1">
                 {(["candlestick","bar","line","area","baseline"] as ChartKind[]).map(k => (
                   <button
                     key={k}
                     onClick={() => setChartKind(k)}
                     className={`rounded px-2 py-1 text-xs capitalize ${
-                      chartKind === k ? "bg-slate-900 font-bold" : "text-slate-700 hover:bg-slate-100"
+                      chartKind === k ? "bg-slate-100 font-bold" : "text-slate-700 hover:bg-slate-100"
                     }`}
                   >
                     {k}
                   </button>
                 ))}
               </div>
-
-              {/* new: quick toggles */}
               <label className="ml-2 flex items-center gap-1 text-xs">
                 <input type="checkbox" checked={showVolume} onChange={() => setShowVolume(v => !v)} />
                 Volume
               </label>
             </div>
-
             <div className="flex items-center gap-2">
               <Badge variant="outline">PERP</Badge>
             </div>
           </div>
 
-          {/* lightweight-charts integration */}
-          <TradingChart
-            market={market}
-            height={445}
-            kind={chartKind}
-            showVolume={showVolume}
-          />
+          <div className="flex-1">
+            <TradingChart
+              market={market}
+              height={445}
+              kind={chartKind}
+              showVolume={showVolume}
+            />
+          </div>
 
           <div className="mt-2 flex items-center justify-between text-xs">
-            {/* timeframe buttons (your originals) */}
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm">6M</Button>
-              <Button variant="outline" size="sm">3M</Button>
-              <Button variant="outline" size="sm">1M</Button>
-              <Button variant="default" size="sm">5D</Button>
-              <Button variant="outline" size="sm">1D</Button>
-              <Button variant="outline" size="sm">4H</Button>
+              <Button radius="sm" variant="outline" size="sm">6M</Button>
+              <Button radius="sm" variant="outline" size="sm">3M</Button>
+              <Button radius="sm" variant="outline" size="sm">1M</Button>
+              <Button radius="sm" variant="default" size="sm">5D</Button>
+              <Button radius="sm" variant="outline" size="sm">1D</Button>
+              <Button radius="sm" variant="outline" size="sm">4H</Button>
               <Button variant="outline" size="sm">1H</Button>
             </div>
-
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1">
               <UTCClock />
               <span className="select-none text-slate-300">|</span>
-              <button
-                className="font-medium hover:underline"
-              >
-                %
-              </button>
-              <button
-                className="font-medium hover:underline"
-              >
-                LOG
-              </button>
-              <button
-                className="text-blue-600 font-semibold hover:underline"
-              >
-                AUTO
-              </button>
+              <button className="font-medium hover:underline">%</button>
+              <button className="font-medium hover:underline">LOG</button>
+              <button className="text-blue-600 font-semibold hover:underline">AUTO</button>
             </div>
           </div>
         </Card>
+      </div>
 
-        {/* Recent trades, positions, orders (unchanged) */}
-        <Card className="p-4 h-80">
-          <Tabs defaultValue="trades">
+      {/* 2. Order Book & Trade History (Middle, Scrollable) */}
+      <div className="col-span-3 row-span-1">
+        <Card className="flex flex-col h-full p-4">
+          <Tabs defaultValue="orderbook" className="flex flex-col flex-1">
             <TabsList>
-              <TabsTrigger value="trades">Recent Trades</TabsTrigger>
+              <TabsTrigger value="orderbook">Order Book</TabsTrigger>
+              <TabsTrigger value="trades">Trade History</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="orderbook" className="flex-1 mt-4 overflow-hidden">
+              <div className="h-full max-h-[500px] overflow-y-auto">
+                <OrderBook currentPrice={market.price} spread={0.12} />
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="trades" className="flex-1 mt-4 overflow-hidden">
+              <div className="h-full max-h-[300px] overflow-y-auto">
+                <div className="space-y-2">
+                  <div className="grid grid-cols-4 gap-4 text-sm font-medium text-gray-500 border-b pb-2 sticky top-0 bg-white">
+                    <span>Time</span>
+                    <span>Price</span>
+                    <span>Amount</span>
+                    <span>Side</span>
+                  </div>
+                  <div className="space-y-2 pt-2">
+                    {mockTrades.map((trade, index) => (
+                      <div key={index} className="grid grid-cols-4 gap-4 text-sm">
+                        <span className="text-gray-600">{trade.time}</span>
+                        <span className="font-medium">${trade.price.toFixed(2)}</span>
+                        <span>{trade.amount}</span>
+                        <span className={trade.side === "buy" ? "text-green-600" : "text-red-600"}>
+                          {trade.side.toUpperCase()}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </TabsContent>
+          </Tabs>
+        </Card>
+      </div>
+
+      {/* 3. Trading Form (Right) */}
+      <div className="col-span-3 row-span-1">
+        <Card className="p-4 h-full">
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Button
+                variant={side === "buy" ? "default" : "outline"}
+                onClick={() => setSide("buy")}
+                className={side === "buy" ? "flex-1 bg-green-600 hover:bg-green-700" : "flex-1" }
+              >
+                Buy / Long
+              </Button>
+              <Button
+                variant={side === "sell" ? "default" : "outline"}
+                onClick={() => setSide("sell")}
+                className={side === "sell" ? "flex-1 bg-red-600 hover:bg-red-700" : "flex-1"}
+              >
+                Sell / Short
+              </Button>
+            </div>
+
+            <Tabs value={orderType} onValueChange={setOrderType}>
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="market">Market</TabsTrigger>
+                <TabsTrigger value="limit">Limit</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="market" className="space-y-4 pt-4">
+                <div>
+                  <label className="text-sm font-medium">Amount (USD)</label>
+                  <Input value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0.00" />
+                </div>
+                <Button className={`w-full ${side === "buy" ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"}`}>
+                  {side === "buy" ? "Buy" : "Sell"} {market.name}
+                </Button>
+              </TabsContent>
+
+              <TabsContent value="limit" className="space-y-4 pt-4">
+                <div>
+                  <label className="text-sm font-medium">Price (USD)</label>
+                  <Input value={price} onChange={(e) => setPrice(e.target.value)} placeholder={market.price.toFixed(2)} />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Amount (USD)</label>
+                  <Input value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0.00" />
+                </div>
+                <Button className={`w-full ${side === "buy" ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"}`}>
+                  Place {side === "buy" ? "Buy" : "Sell"} Order
+                </Button>
+              </TabsContent>
+            </Tabs>
+          </div>
+        </Card>
+      </div>
+      
+      {/* 4. Positions & Open Orders (Bottom) */}
+      <div className="col-span-12">
+        <Card className="p-4 h-80">
+          <Tabs defaultValue="positions">
+            <TabsList>
               <TabsTrigger value="positions">Positions</TabsTrigger>
               <TabsTrigger value="orders">Open Orders</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="trades">
-              <div className="space-y-2">
-                <div className="grid grid-cols-4 gap-4 text-sm font-medium text-gray-500 border-b pb-2">
-                  <span>Time</span>
-                  <span>Price</span>
-                  <span>Amount</span>
-                  <span>Side</span>
-                </div>
-                {mockTrades.map((trade, index) => (
-                  <div key={index} className="grid grid-cols-4 gap-4 text-sm">
-                    <span className="text-gray-600">{trade.time}</span>
-                    <span className="font-medium">${trade.price.toFixed(2)}</span>
-                    <span>{trade.amount}</span>
-                    <span className={trade.side === "buy" ? "text-green-600" : "text-red-600"}>
-                      {trade.side.toUpperCase()}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </TabsContent>
-
-            <TabsContent value="positions">
+            <TabsContent value="positions" className="mt-4">
               {mockPositions.length > 0 ? (
                 <div className="space-y-2">
                   <div className="grid grid-cols-6 gap-4 text-sm font-medium text-gray-500 border-b pb-2">
@@ -180,73 +243,10 @@ export function TradingView({ market }: TradingViewProps) {
               )}
             </TabsContent>
 
-            <TabsContent value="orders">
+            <TabsContent value="orders" className="mt-4">
               <div className="text-center py-8 text-gray-500">No open orders</div>
             </TabsContent>
           </Tabs>
-        </Card>
-      </div>
-
-      {/* Right sidebar with orderbook and trading (unchanged) */}
-      <div className="col-span-4 space-y-6">
-        <Card className="p-4">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold">Order Book</h3>
-            <Button variant="outline" size="sm">Spread: $0.12</Button>
-          </div>
-          <OrderBook currentPrice={market.price} />
-        </Card>
-
-        <Card className="p-4">
-          <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <Button
-                variant={side === "buy" ? "default" : "outline"}
-                onClick={() => setSide("buy")}
-                className={side === "buy" ? "flex-1 bg-green-600 hover:bg-green-700" : "flex-1" }
-              >
-                Buy / Long
-              </Button>
-              <Button
-                variant={side === "sell" ? "destructive" : "outline"}
-                onClick={() => setSide("sell")}
-                className="flex-1"
-              >
-                Sell / Short
-              </Button>
-            </div>
-
-            <Tabs value={orderType} onValueChange={setOrderType}>
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="market">Market</TabsTrigger>
-                <TabsTrigger value="limit">Limit</TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="market" className="space-y-4">
-                <div>
-                  <label className="text-sm font-medium">Amount (USD)</label>
-                  <Input value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0.00" />
-                </div>
-                <Button className={`w-full ${side === "buy" ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"}`}>
-                  {side === "buy" ? "Buy" : "Sell"} {market.name}
-                </Button>
-              </TabsContent>
-
-              <TabsContent value="limit" className="space-y-4">
-                <div>
-                  <label className="text-sm font-medium">Price (USD)</label>
-                  <Input value={price} onChange={(e) => setPrice(e.target.value)} placeholder={market.price.toFixed(2)} />
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Amount (USD)</label>
-                  <Input value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0.00" />
-                </div>
-                <Button className={`w-full ${side === "buy" ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"}`}>
-                  Place {side === "buy" ? "Buy" : "Sell"} Order
-                </Button>
-              </TabsContent>
-            </Tabs>
-          </div>
         </Card>
       </div>
     </div>

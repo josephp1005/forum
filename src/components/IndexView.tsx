@@ -83,123 +83,109 @@ export function IndexView({ market }: IndexViewProps) {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Attention Score Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card className="p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">Attention Score</p>
-              <p className="text-3xl font-bold text-gray-900">{market.spot_price.toFixed(0)}</p>
+    <div className="grid grid-cols-12 grid-rows-[1fr_1fr] mb-2 gap-3 p-1 min-h-[calc(100vh-80px)]">
+      
+      {/* 1. Attention Over Time Chart (Top-Left) */}
+      <div className="col-span-8 row-span-1">
+        <Card className="flex flex-col h-full p-4">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold">Attention Over Time</h3>
+            <div className="flex items-center gap-2">
+              <button className="px-3 py-1 text-sm bg-blue-600 text-white rounded">7D</button>
+              <button className="px-3 py-1 text-sm bg-gray-100 text-gray-600 rounded">30D</button>
+              <button className="px-3 py-1 text-sm bg-gray-100 text-gray-600 rounded">90D</button>
             </div>
-            <div className={`${market.change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {market.change >= 0 ? <TrendingUp className="w-8 h-8" /> : <TrendingDown className="w-8 h-8" />}
-            </div>
           </div>
-          <p className={`text-sm mt-2 ${market.change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-            {market.change >= 0 ? '+' : ''}{market.changePercent.toFixed(1)}% from yesterday
-          </p>
-        </Card>
-        
-        <Card className="p-6">
-          <div>
-            <p className="text-sm text-gray-500">Peak Score (30d)</p>
-            <p className="text-2xl font-bold text-gray-900">1,247</p>
-          </div>
-          <p className="text-sm text-blue-600 mt-2">Reached 5 days ago</p>
-        </Card>
-        
-        <Card className="p-6">
-          <div>
-            <p className="text-sm text-gray-500">Attention Velocity</p>
-            <p className="text-2xl font-bold text-gray-900">+23.4%</p>
-          </div>
-          <p className="text-sm text-green-600 mt-2">Accelerating</p>
-        </Card>
-        
-        <Card className="p-6">
-          <div>
-            <p className="text-sm text-gray-500">Cultural Rank</p>
-            <p className="text-2xl font-bold text-gray-900">#12</p>
-          </div>
-          <p className="text-sm text-orange-600 mt-2">in {market.category}</p>
-        </Card>
-      </div>
-
-      {/* Charts Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Attention Score Chart */}
-        <div className="lg:col-span-2">
-          <Card className="p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="font-semibold">Attention Over Time</h3>
-              <div className="flex items-center gap-2">
-                <button className="px-3 py-1 text-sm bg-blue-600 text-white rounded">7D</button>
-                <button className="px-3 py-1 text-sm bg-gray-100 text-gray-600 rounded">30D</button>
-                <button className="px-3 py-1 text-sm bg-gray-100 text-gray-600 rounded">90D</button>
-              </div>
-            </div>
+          
+          <div className="flex-1">
             <AttentionChart market={market} events={mockEvents} />
-          </Card>
-        </div>
-
-        {/* Attention Sources */}
-        <div>
-          <Card className="p-6">
-            <h3 className="font-semibold mb-4">Attention Sources</h3>
-            <AttentionSources />
-          </Card>
-        </div>
-      </div>
-
-      {/* Key Events & News */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Key Events */}
-        <Card className="p-6">
-          <h3 className="font-semibold mb-4">Key Events (Last 30 Days)</h3>
-          <div className="space-y-4">
-            {mockEvents.map((event, index) => (
-              <div key={index} className="border-l-2 border-blue-200 pl-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4 text-gray-400" />
-                    <span className="text-sm text-gray-500">{event.date}</span>
-                  </div>
-                  <Badge variant="outline" className="text-green-600">
-                    {event.impact}
-                  </Badge>
-                </div>
-                <h4 className="font-medium mt-1">{event.event}</h4>
-                <p className="text-sm text-gray-600">{event.description}</p>
-              </div>
-            ))}
+          </div>
+          
+          {/* Stats bar at bottom */}
+          <div className="mt-4 grid grid-cols-4 gap-4 pt-4 border-t">
+            <div className="text-center">
+              <p className="text-lg font-bold text-gray-900">{market.spot_price.toFixed(0)}</p>
+              <p className="text-xs text-gray-500">Current Score</p>
+            </div>
+            <div className="text-center">
+              <p className="text-lg font-bold text-gray-900">1,247</p>
+              <p className="text-xs text-gray-500">Peak (30d)</p>
+            </div>
+            <div className="text-center">
+              <p className="text-lg font-bold text-green-600">+23.4%</p>
+              <p className="text-xs text-gray-500">24h</p>
+            </div>
+            <div className="text-center">
+              <p className="text-lg font-bold text-gray-900">#12</p>
+              <p className="text-xs text-gray-500">Rank</p>
+            </div>
           </div>
         </Card>
+      </div>
 
-        {/* Recent News */}
-        <Card className="p-6">
-          <h3 className="font-semibold mb-4">Recent News & Mentions</h3>
-          <div className="space-y-4">
-            {mockNews.map((article) => (
-              <div key={article.id} className="border-b border-gray-100 pb-4 last:border-b-0">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Badge variant="outline" className={getImpactColor(article.impact)}>
-                        {article.impact} impact
-                      </Badge>
-                      <span className="text-sm text-gray-500">{article.time}</span>
-                    </div>
-                    <h4 className="font-medium text-sm mb-1">{article.title}</h4>
-                    <p className="text-sm text-gray-600 mb-2">{article.summary}</p>
+      {/* 2. Attention Sources (Top-Right, Scrollable) */}
+      <div className="col-span-4 row-span-1">
+        <Card className="flex flex-col h-full p-4">
+          <h3 className="font-semibold mb-4">Attention Sources</h3>
+          <div className="flex-1 overflow-y-auto max-h-[400px]">
+            <AttentionSources />
+          </div>
+        </Card>
+      </div>
+
+      {/* 3. Key Events (Bottom-Left, Scrollable) */}
+      <div className="col-span-6 row-span-1">
+        <Card className="flex flex-col h-full p-4">
+          <h3 className="font-semibold mb-4">Key Events (Last 30 Days)</h3>
+          <div className="flex-1 overflow-y-auto max-h-[300px]">
+            <div className="space-y-4">
+              {mockEvents.map((event, index) => (
+                <div key={index} className="border-l-2 border-blue-200 pl-4">
+                  <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <span className="text-xs text-gray-500">{article.source}</span>
-                      <ExternalLink className="w-3 h-3 text-gray-400" />
+                      <Calendar className="w-4 h-4 text-gray-400" />
+                      <span className="text-sm text-gray-500">{event.date}</span>
+                    </div>
+                    <Badge variant="outline" className="text-green-600">
+                      {event.impact}
+                    </Badge>
+                  </div>
+                  <h4 className="font-medium mt-1">{event.event}</h4>
+                  <p className="text-sm text-gray-600">{event.description}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      {/* 4. Recent News & Mentions (Bottom-Right, Scrollable) */}
+      <div className="col-span-6 row-span-1">
+        <Card className="flex flex-col h-full p-4">
+          <h3 className="font-semibold mb-4">Recent News & Mentions</h3>
+          <div className="flex-1 overflow-y-auto max-h-[420px]">
+            <div className="space-y-4">
+              {mockNews.map((article) => (
+                <div key={article.id} className="border-b border-gray-100 pb-4 last:border-b-0">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Badge variant="outline" className={getImpactColor(article.impact)}>
+                          {article.impact} impact
+                        </Badge>
+                        <span className="text-sm text-gray-500">{article.time}</span>
+                      </div>
+                      <h4 className="font-medium text-sm mb-1">{article.title}</h4>
+                      <p className="text-sm text-gray-600 mb-2">{article.summary}</p>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-gray-500">{article.source}</span>
+                        <ExternalLink className="w-3 h-3 text-gray-400" />
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </Card>
       </div>

@@ -94,15 +94,19 @@ export function MarketDetail({ market, onBack }: MarketDetailProps) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-48 grid-cols-2 mt-4">
-            <TabsTrigger value="trade">Trade</TabsTrigger>
+            <TabsTrigger
+              value="trade"
+            >
+              Trade
+            </TabsTrigger>
             <TabsTrigger value="index">Index</TabsTrigger>
           </TabsList>
           
-          <TabsContent value="trade" className="mt-6">
+          <TabsContent value="trade" className="mt-3">
             <TradingView market={market} />
           </TabsContent>
           
-          <TabsContent value="index" className="mt-6">
+          <TabsContent value="index" className="mt-3">
             <IndexView market={market} />
           </TabsContent>
         </Tabs>

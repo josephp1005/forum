@@ -44,7 +44,7 @@ export function AttentionSources() {
 
   return (
     <div className="space-y-4">
-      <div className="text-sm text-gray-500 mb-4">
+      <div className="-mt-1 text-sm font-medium mb-4">
         Attention distribution across platforms
       </div>
       
