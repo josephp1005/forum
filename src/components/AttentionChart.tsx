@@ -66,8 +66,9 @@ export function AttentionChart({ market, events }: AttentionChartProps) {
           <p className="font-medium mb-2">{label}</p>
           <div className="space-y-1 text-sm">
             <p className="text-blue-600">
-              Attention Score: <span className="font-medium">{data.score || 0}</span>
+              <span className="font-medium">{data.score || 0}</span>
             </p>
+            {/*
             <p className="text-green-600">
               Social Media: <span className="font-medium">{data.socialMedia || 0}</span>
             </p>
@@ -76,7 +77,7 @@ export function AttentionChart({ market, events }: AttentionChartProps) {
             </p>
             <p className="text-orange-600">
               Media Chatter: <span className="font-medium">{data.mediaChatter || 0}</span>
-            </p>
+            </p>*/}
             {data.hasEvent && data.eventData && (
               <div className="mt-2 pt-2 border-t border-gray-200">
                 <p className="font-medium text-red-600">{data.eventData.name}</p>
