@@ -64,7 +64,7 @@ function genMockVolume(c: CandlestickData[]): HistogramData[] {
 const TradingChart: React.FC<TradingChartProps> = ({
   height = 420,
   dark = false,
-  showVolume = true,
+  showVolume = false,
   kind = 'candlestick',
 }) => {
   const hostRef = useRef<HTMLDivElement | null>(null);

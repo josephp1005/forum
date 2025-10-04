@@ -29,7 +29,7 @@ export function TradingView({ market }: TradingViewProps) {
   const [price, setPrice] = useState("");
 
   const [chartKind, setChartKind] = useState<ChartKind>("candlestick");
-  const [showVolume, setShowVolume] = useState(true);
+  const [showVolume, setShowVolume] = useState(false);
 
   const mockTrades = [
     { time: "14:32:45", price: 847.32, amount: 12.5, side: "buy" },
