@@ -4,6 +4,7 @@ import { Button } from "./ui/button";
 import { ArrowLeft, Star } from "lucide-react";
 import {TradingView} from "./TradingView";
 import { IndexView } from "./IndexView";
+import { useAttentionData, useFormattedTimeRemaining } from "../hooks/useAttentionData";
 
 interface MarketDetailProps {
   market: {
@@ -24,6 +25,24 @@ interface MarketDetailProps {
 export function MarketDetail({ market, onBack }: MarketDetailProps) {
   const [activeTab, setActiveTab] = useState("trade");
   const isPositive = market.change >= 0;
+
+  // Check if this is LeBron James market for real-time data
+  const isLeBronJames = market.id === 'lebron-james';
+  
+  // Use real-time data hook for LeBron James
+  const {
+    data: attentionData,
+    loading,
+    error,
+    lastUpdated,
+    nextUpdateIn,
+    canUpdate,
+    forceUpdate
+  } = useAttentionData({
+    marketId: market.id,
+    marketName: market.name,
+    isRealTimeMode: isLeBronJames
+  });
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -56,7 +75,7 @@ export function MarketDetail({ market, onBack }: MarketDetailProps) {
               
               <div className="flex items-center gap-6 ml-8">
                 <div>
-                  <p className="text-2xl font-bold text-gray-900">${market.price.toFixed(2)}</p>
+                  <p className="text-2xl font-bold text-gray-900">${isLeBronJames && attentionData.length > 0 ? attentionData[attentionData.length - 1]?.attention_score + 0.34 || 0 : market.spot_price.toFixed(0)}</p>
                   <p className={`text-sm ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
                     {isPositive ? '+' : ''}{market.changePercent.toFixed(2)}% (24h)
                   </p>
@@ -75,7 +94,7 @@ export function MarketDetail({ market, onBack }: MarketDetailProps) {
                 </div>
                 <div className="text-sm text-gray-500">
                   <p>Index Price</p>
-                  <p className="font-medium text-gray-900">${market.spot_price.toFixed(2)}</p>
+                  <p className="font-medium text-gray-900">${isLeBronJames && attentionData.length > 0 ? attentionData[attentionData.length - 1]?.attention_score || 0 : market.spot_price.toFixed(0)}</p>
                 </div>
                 <div className="text-sm text-gray-500">
                   <p>Next Index Update</p>

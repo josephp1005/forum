@@ -136,7 +136,7 @@ export function AttentionChart({ market, events = [], realTimeData = [], isRealT
           x={cx} 
           y={cy - 25} 
           textAnchor="middle" 
-          fontSize={10} 
+          fontSize={12} 
           fill="#ef4444"
           fontWeight="bold"
         >

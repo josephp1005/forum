@@ -4,13 +4,6 @@ import { TrendingUp, TrendingDown } from "lucide-react";
 export function AttentionSources() {
   const sources = [
     {
-      platform: "TikTok",
-      percentage: 35,
-      change: +12.5,
-      color: "bg-pink-500",
-      icon: "🎵"
-    },
-    {
       platform: "Google Trends",
       percentage: 28,
       change: +8.2,
@@ -23,13 +16,6 @@ export function AttentionSources() {
       change: -3.1,
       color: "bg-black",
       icon: "🐦"
-    },
-    {
-      platform: "Instagram",
-      percentage: 12,
-      change: +5.7,
-      color: "bg-gradient-to-r from-purple-500 to-pink-500",
-      icon: "📸"
     },
     {
       platform: "YouTube",
@@ -86,7 +72,7 @@ export function AttentionSources() {
         <h4 className="font-medium text-sm mb-3">Live Activity</h4>
         <div className="space-y-2 text-sm">
           <div className="flex items-center justify-between">
-            <span className="text-gray-600">🔥 TikTok mentions</span>
+            <span className="text-gray-600">🔥 Twitter/X mentions</span>
             <span className="font-medium text-green-600">+2.3K/hr</span>
           </div>
           <div className="flex items-center justify-between">

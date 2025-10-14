@@ -2,6 +2,7 @@ import { Card } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { TrendingUp, TrendingDown } from "lucide-react";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
+import { useAttentionData } from "../hooks/useAttentionData";
 
 interface MarketCardProps {
   id: string;
@@ -30,6 +31,24 @@ export function MarketCard({
   onClick 
 }: MarketCardProps) {
   const isPositive = change >= 0;
+
+  // Check if this is LeBron James market for real-time data
+  const isLeBronJames = id === 'lebron-james';
+  
+  // Use real-time data hook for LeBron James
+  const {
+    data: attentionData,
+    loading,
+    error,
+    lastUpdated,
+    nextUpdateIn,
+    canUpdate,
+    forceUpdate
+  } = useAttentionData({
+    marketId: id,
+    marketName: name,
+    isRealTimeMode: isLeBronJames
+  });
   
   return (
     <Card 
@@ -58,7 +77,7 @@ export function MarketCard({
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <span className="text-2xl font-bold text-gray-900">
-            ${price.toFixed(2)}
+            ${isLeBronJames && attentionData.length > 0 ? attentionData[attentionData.length - 1]?.attention_score + 0.34 || 0 : price.toFixed(2)}
           </span>
           <div className={`flex items-center gap-1 ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
             {isPositive ? (

@@ -75,19 +75,19 @@ export function IndexView({ market }: IndexViewProps) {
 
   const mockEvents = [
     {
-      date: "2024-09-25",
-      event: "Album Release Announcement",
+      date: "2025-09-25",
+      event: "Team Trade Announcement",
       impact: "+15.2%",
       description: "Major announcement drives attention spike"
     },
     {
-      date: "2024-09-20",
+      date: "2025-09-20",
       event: "Viral TikTok Moment",
       impact: "+8.7%",
       description: "Organic social media moment"
     },
     {
-      date: "2024-09-15",
+      date: "2025-09-15",
       event: "Award Show Performance",
       impact: "+12.4%",
       description: "Prime time television exposure"
@@ -113,11 +113,6 @@ export function IndexView({ market }: IndexViewProps) {
             <div className="flex items-center gap-3">
               <h3 className="font-semibold">
                 Attention Over Time
-                {isLeBronJames && (
-                  <Badge variant="outline" className="ml-2 text-green-600">
-                    Real-time
-                  </Badge>
-                )}
               </h3>
               {loading && (
                 <RefreshCw className="w-4 h-4 animate-spin text-blue-600" />
@@ -126,7 +121,8 @@ export function IndexView({ market }: IndexViewProps) {
             
             <div className="flex items-center gap-2">
               {isLeBronJames && (
-                <div className="flex items-center gap-2 mr-4">
+                <div className="flex items-center gap-2 mr-2">
+                  {/*
                   <Button
                     variant="outline"
                     size="sm"
@@ -136,7 +132,7 @@ export function IndexView({ market }: IndexViewProps) {
                   >
                     <RefreshCw className={`w-3 h-3 mr-1 ${loading ? 'animate-spin' : ''}`} />
                     {canUpdate ? 'Update Now' : `${timeRemainingText}`}
-                  </Button>
+                  </Button>*/}
                   {lastUpdated && (
                     <span className="text-xs text-gray-500">
                       Updated: {new Date(lastUpdated).toLocaleTimeString()}
@@ -187,13 +183,10 @@ export function IndexView({ market }: IndexViewProps) {
             </div>
             <div className="text-center">
               <p className="text-lg font-bold text-green-600">
-                {isLeBronJames && attentionData.length > 0 
-                  ? `${attentionData.length} pts`
-                  : '+23.4%'
-                }
+                +23.4%
               </p>
               <p className="text-xs text-gray-500">
-                {isLeBronJames ? 'Data Points' : '24h'}
+                {'24h'}
               </p>
             </div>
             <div className="text-center">
