@@ -13,15 +13,18 @@ export const fetchYouTubeData = async (sourceParams: { id: string }): Promise<nu
 const getViewCount = async (videoId: string): Promise<number> => {
     try {
         const response = await youtube.videos.list({
-            part: 'statistics',
-            id: videoId,
+            part: ['statistics'],
+            id: [videoId],
         });
 
-        if (response.data.items.length === 0) {
+        if (!response.data.items || response.data.items.length === 0) {
             throw new Error('Video not found');
         }
 
         const video = response.data.items[0];
+        if (!video.statistics || video.statistics.viewCount == null) {
+            throw new Error('Video statistics or view count not found');
+        }
         return parseInt(video.statistics.viewCount, 10);
     } catch (error) {
         console.error('Error fetching YouTube video details:', error);
