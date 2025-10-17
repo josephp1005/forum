@@ -27,7 +27,7 @@ const getViewCount = async (videoId: string): Promise<number> => {
         }
         return parseInt(video.statistics.viewCount, 10);
     } catch (error) {
-        console.error('Error fetching YouTube video details:', error);
+        console.error('Error fetching YouTube video view count:', error);
         throw error;
     }
 };

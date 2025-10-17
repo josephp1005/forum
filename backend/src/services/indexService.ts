@@ -1,6 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 import config from '../config/config.js';
 import { fetchYouTubeData } from './sources/youtubeService.js';
+import { fetchLastFmData } from './sources/lastFmService.js';
+import { fetchSpotifyData } from './sources/spotifyService.js';
 
 const supabase = createClient(config.supabaseUrl, config.supabaseServiceRoleKey);
 
@@ -26,6 +28,12 @@ const refreshAttentionIndex = async (market_id: number) => {
             switch (source) {
                 case 'youtube':
                     sourceResults[source] = await fetchYouTubeData(sourceParams[source]);
+                    break;
+                case 'last.fm':
+                    sourceResults[source] = await fetchLastFmData(sourceParams[source]);
+                    break;
+                case 'spotify':
+                    sourceResults[source] = await fetchSpotifyData(supabase, indexId, sourceParams[source]);
                     break;
                 
                 default:
