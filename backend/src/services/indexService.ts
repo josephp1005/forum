@@ -4,11 +4,16 @@ import { fetchYouTubeData } from './sources/youtubeService.js';
 import { fetchLastFmData } from './sources/lastFmService.js';
 import { fetchSpotifyData } from './sources/spotifyService.js';
 import { fetchDeezerData } from './sources/deezerService.js';
+import { fetchXData } from './sources/xService.js';
 
 const supabase = createClient(config.supabaseUrl, config.supabaseServiceRoleKey);
 
 const refreshAttentionIndex = async (market_id: number) => {
-    // first fetch the index info (id, sources, etc.)
+    // fetch the market category and sub-category
+    const category = await getMarketCategory(market_id);
+    const subCategory = await getMarketSubCategory(market_id);
+
+    // fetch the index info (id, sources, etc.)
     const indexId = await getIndexId(market_id);
     const indexInfo = await getIndexInfo(indexId);
     const sources = indexInfo.attention_sources;
@@ -39,7 +44,9 @@ const refreshAttentionIndex = async (market_id: number) => {
                 case 'deezer':
                     sourceResults[source] = await fetchDeezerData(sourceParams[source]);
                     break;
-                
+                case 'x':
+                    sourceResults[source] = await fetchXData(sourceParams[source]);
+                    break;
                 default:
                     console.warn(`Unknown source: ${source}`);
                     break;
@@ -114,5 +121,45 @@ const appendToIndex = async (indexId: number, timestamp: string, data: { [key: s
         throw error;
     }
 };
+
+const getMarketCategory = async (marketId: number): Promise<string> => {
+    try {
+        const { data, error } = await supabase
+            .from('markets')
+            .select('category')
+            .eq('id', marketId)
+            .single();
+
+        if (error) {
+            throw new Error(`Failed to fetch category for market ${marketId}: ${error.message}`);
+        }
+
+        return data?.category;
+
+    } catch (error) {
+        console.error('Error fetching market category:', error);
+        throw error;
+    }
+}
+
+const getMarketSubCategory = async (marketId: number): Promise<string> => {
+    try {
+        const { data, error } = await supabase
+            .from('markets')
+            .select('sub_category')
+            .eq('id', marketId)
+            .single();
+
+        if (error) {
+            throw new Error(`Failed to fetch sub-category for market ${marketId}: ${error.message}`);
+        }
+
+        return data?.sub_category;
+
+    } catch (error) {
+        console.error('Error fetching market sub-category:', error);
+        throw error;
+    }
+}
 
 export { refreshAttentionIndex };
