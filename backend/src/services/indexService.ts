@@ -3,6 +3,7 @@ import config from '../config/config.js';
 import { fetchYouTubeData } from './sources/youtubeService.js';
 import { fetchLastFmData } from './sources/lastFmService.js';
 import { fetchSpotifyData } from './sources/spotifyService.js';
+import { fetchDeezerData } from './sources/deezerService.js';
 
 const supabase = createClient(config.supabaseUrl, config.supabaseServiceRoleKey);
 
@@ -34,6 +35,9 @@ const refreshAttentionIndex = async (market_id: number) => {
                     break;
                 case 'spotify':
                     sourceResults[source] = await fetchSpotifyData(supabase, indexId, sourceParams[source]);
+                    break;
+                case 'deezer':
+                    sourceResults[source] = await fetchDeezerData(sourceParams[source]);
                     break;
                 
                 default:
