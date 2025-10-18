@@ -7,25 +7,25 @@ const getTweetCount = async (query: string): Promise<number> => {
     try {
         const bearerToken = process.env.TWITTER_BEARER_TOKEN;
 
-        const endTime = new Date();
-        const startTime = new Date(endTime.getTime() - (60 * 60 * 1000));
+        const now = new Date();
+        const endTime = new Date(now.getTime() - (10 * 1000));
+        const startTime = new Date(now.getTime() - (60 * 60 * 1000) - (10 * 1000));
         const endTimeISO = endTime.toISOString();
         const startTimeISO = startTime.toISOString();
 
-        const baseUrl = 'https://api.twitter.com/2/tweets/counts/recent';
-        const url = new URL(baseUrl);
-        
-        url.searchParams.append('query', query);
-        url.searchParams.append('start_time', startTimeISO);
-        url.searchParams.append('end_time', endTimeISO);
+        const url = `https://api.x.com/2/tweets/counts/recent?granularity=hour&query=${encodeURIComponent(query)}&start_time=${encodeURIComponent(startTimeISO)}&end_time=${encodeURIComponent(endTimeISO)}`;
 
-        const response = await fetch(url.toString(), {
+        const response = await fetch(url, {
+            method: 'GET',
             headers: {
                 'Authorization': `Bearer ${bearerToken}`,
+                'Content-Type': 'application/json',
             },
         });
 
         if (!response.ok) {
+            const errorBody = await response.text();
+            console.error('Twitter API error response:', errorBody);
             throw new Error(`Twitter API error: ${response.status} ${response.statusText}`);
         }
 
