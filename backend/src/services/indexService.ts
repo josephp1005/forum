@@ -5,6 +5,7 @@ import { fetchLastFmData } from './sources/lastFmService.js';
 import { fetchSpotifyData } from './sources/spotifyService.js';
 import { fetchDeezerData } from './sources/deezerService.js';
 import { fetchXData } from './sources/xService.js';
+import { fetchNewsApiData } from './sources/newsApiService.js';
 
 const supabase = createClient(config.supabaseUrl, config.supabaseServiceRoleKey);
 
@@ -18,6 +19,7 @@ const refreshAttentionIndex = async (market_id: number) => {
     const indexInfo = await getIndexInfo(indexId);
     const sources = indexInfo.attention_sources;
     const sourceParams = indexInfo.attention_query_params;
+    const fetchNews = indexInfo.fetch_news;
 
     // fetch data for each source
     const currTimestamp = new Date().toISOString();
@@ -59,8 +61,40 @@ const refreshAttentionIndex = async (market_id: number) => {
         }
     }
 
-    // update db with timestamp
-    await appendToIndex(indexId, currTimestamp, sourceResults);
+    let newsSourceResults: { [key: string]: any } | null = null;
+
+    if (fetchNews) {
+        const newsSources = indexInfo.news_sources;
+        const newsQueryParams = indexInfo.news_query_params;
+        const lastNewsFetch = indexInfo.last_news_fetch;
+        const newsFetchFrequency = indexInfo.news_fetch_frequency;
+        const shouldFetch = shouldFetchNews(lastNewsFetch, currTimestamp, newsFetchFrequency);
+
+        newsSourceResults = {};
+
+        if (!shouldFetch) {
+            return;
+        }
+
+        for (const source of newsSources) {
+            try {
+                console.log(`Fetching news from ${source}...`);
+
+                switch (source) {
+                    case 'newsapi':
+                        newsSourceResults[source] = await fetchNewsApiData(newsQueryParams[source], newsFetchFrequency, currTimestamp);
+                        break;
+                    default:
+                        console.warn(`Unknown news source: ${source}`);
+                        break;
+                }
+            } catch (error) {
+                console.error(`Error fetching news from ${source}:`, error);
+            }
+        };
+    }
+
+    await appendToIndex(indexId, currTimestamp, sourceResults, newsSourceResults);
 
 };
 
@@ -88,7 +122,7 @@ const getIndexInfo = async (indexId: number) => {
     try {
         const { data, error } = await supabase
             .from('indices')
-            .select('attention_sources, attention_query_params')
+            .select('attention_sources, attention_query_params, fetch_news, news_sources, last_news_fetch, news_fetch_frequency, news_query_params')
             .eq('id', indexId)
             .single();
 
@@ -103,16 +137,21 @@ const getIndexInfo = async (indexId: number) => {
     }
 };
 
-const appendToIndex = async (indexId: number, timestamp: string, data: { [key: string]: number }) => {
-    const payload = {
-        [timestamp]: data,
+const appendToIndex = async (indexId: number, timestamp: string, metricsData: { [key: string]: number }, newsData: { [key: string]: any } | null) => {
+    const metricsPayload = {
+        [timestamp]: metricsData
     };
+
+    const newsPayload = newsData ? {
+        [timestamp]: newsData
+    } : null;
 
     const { error } = await supabase.rpc(
         'append_index_raw_data',
         {
             p_index_id: indexId,
-            p_data: payload,
+            p_metrics_data: metricsPayload,
+            p_news_data: newsPayload,
         }
     );
 
@@ -160,6 +199,16 @@ const getMarketSubCategory = async (marketId: number): Promise<string> => {
         console.error('Error fetching market sub-category:', error);
         throw error;
     }
+}
+
+const shouldFetchNews = (lastFetch: string | null, currTimestamp: string, newsFetchFrequency: number): boolean => {
+    if (!lastFetch) return true;
+
+    const lastFetchTime = new Date(lastFetch).getTime();
+    const currTime = new Date(currTimestamp).getTime();
+
+    const frequency = newsFetchFrequency * 1000;
+    return (currTime - lastFetchTime) >= frequency;
 }
 
 export { refreshAttentionIndex };
