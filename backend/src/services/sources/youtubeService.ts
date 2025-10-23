@@ -70,27 +70,16 @@ const getNumNewVideos = async (query: string): Promise<number> => {
         let totalVideoCount = 0;
         let nextPageToken: string | undefined = undefined;
 
-        do {
-            const response = await youtube.search.list({
-                part: ['id'],
-                q: query,
-                publishedAfter: oneHourAgo,
-                type: ['video'],
-                maxResults: 50,
-                pageToken: nextPageToken,
-            });
+        const response = await youtube.search.list({
+            part: ['id'],
+            q: query,
+            publishedAfter: oneHourAgo,
+            type: ['video'],
+            maxResults: 50,
+            pageToken: nextPageToken,
+        });
 
-            if (!response.data.items) {
-                break;
-            }
-
-            totalVideoCount += response.data.items.length;
-
-            nextPageToken = response.data.nextPageToken;
-
-        } while (nextPageToken);
-
-        return totalVideoCount;
+        return response.data.pageInfo?.totalResults || 0;
 
     } catch (error) {
         console.error('Error fetching number of new YouTube videos:', error);

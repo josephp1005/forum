@@ -20,29 +20,9 @@ const getNewsArticles = async (db, indexId: number, query: string, newsFetchInte
 
         const data = await response.json();
 
-        await updateLastNewsFetch(db, indexId, currTimestamp);
-
         return data;
     } catch (error) {
         console.error('Error fetching news articles:', error);
         throw error;
     }
 }
-
-const updateLastNewsFetch = async (db, indexId: number, timestamp: string): Promise<void> => {
-    try {
-        const { error: updateError } = await db
-            .from('indices')
-            .update({ last_news_fetch: timestamp })
-            .eq('id', indexId);
-
-        if (updateError) {
-            console.error('Error updating last news fetch timestamp:', updateError);
-            throw updateError;
-        }
-
-    } catch (error) {
-        console.error('Error in updating last news fetch timestamp:', error);
-        throw error;
-    }
-};

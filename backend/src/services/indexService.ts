@@ -31,6 +31,10 @@ const refreshAttentionIndex = async (market_id: number) => {
     const newsFetchInterval = indexInfo.news_fetch_interval;
     const fetchNews = indexInfo.track_news && shouldFetchNews(lastNewsFetch, currTimestamp, newsFetchFrequency);
 
+    if (fetchNews) {
+        await updateLastNewsFetch(supabase, indexId, currTimestamp);
+    }
+
     const newsSourceResults: { [key: string]: any } = {};
 
     for (const source of sources) {
@@ -40,23 +44,32 @@ const refreshAttentionIndex = async (market_id: number) => {
             switch (source) {
                 case 'youtube':
                     sourceResults[source] = await fetchYouTubeData(subCategory, sourceParams[source]);
+
+                    console.log("YouTube metrics:", sourceResults[source]);
                     break;
                 case 'last.fm':
                     sourceResults[source] = await fetchLastFmData(subCategory, sourceParams[source]);
+
+                    console.log("Last.fm metrics:", sourceResults[source]);
                     break;
                 case 'spotify':
                     sourceResults[source] = await fetchSpotifyData(supabase, subCategory, indexId, sourceParams[source]);
+
+                    console.log("Spotify metrics:", sourceResults[source]);
                     break;
                 case 'deezer':
                     sourceResults[source] = await fetchDeezerData(sourceParams[source]);
+
+                    console.log("Deezer metrics:", sourceResults[source]);
                     break;
                 case 'x':
                     sourceResults[source] = await fetchXData(sourceParams[source]);
 
-                    if (fetchNews) {
+                    if (fetchNews && newsQueryParams[source]) {
                         newsSourceResults[source] = await fetchXPosts(newsQueryParams[source], newsFetchInterval);
                     }
 
+                    console.log("X metrics:", sourceResults[source]);
                     break;
                 case 'reddit':
                     const { metrics, posts } = await fetchRedditData(supabase, indexId, sourceParams[source]);
@@ -66,9 +79,13 @@ const refreshAttentionIndex = async (market_id: number) => {
                         newsSourceResults[source] = posts;
                     }
 
+                    console.log("Reddit metrics:", sourceResults[source]);
                     break;
                 case 'newsapi':
-                    newsSourceResults[source] = await fetchNewsApiData(supabase, indexId, newsQueryParams[source], newsFetchInterval, currTimestamp);
+                    if (fetchNews && newsQueryParams[source]) {
+                        newsSourceResults[source] = await fetchNewsApiData(supabase, indexId, newsQueryParams[source], newsFetchInterval, currTimestamp);
+                    }
+
                     break;
                 default:
                     console.warn(`Unknown source: ${source}`);
@@ -200,5 +217,23 @@ const shouldFetchNews = (lastFetch: string | null, currTimestamp: string, newsFe
     const frequency = newsFetchFrequency * 1000;
     return (currTime - lastFetchTime) >= frequency;
 }
+
+const updateLastNewsFetch = async (db, indexId: number, timestamp: string): Promise<void> => {
+    try {
+        const { error: updateError } = await db
+            .from('indices')
+            .update({ last_news_fetch: timestamp })
+            .eq('id', indexId);
+
+        if (updateError) {
+            console.error('Error updating last news fetch timestamp:', updateError);
+            throw updateError;
+        }
+
+    } catch (error) {
+        console.error('Error in updating last news fetch timestamp:', error);
+        throw error;
+    }
+};
 
 export { refreshAttentionIndex };
