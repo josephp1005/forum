@@ -5,12 +5,22 @@ const youtube = google.youtube({
     auth: process.env.YOUTUBE_API_KEY,
 });
 
-export const fetchYouTubeData = async (sourceParams: { id: string }): Promise<number> => {
-    const viewCount = await getViewCount(sourceParams.id);
-    return viewCount;
+export const fetchYouTubeData = async (subCategory: string, sourceParams: { id: string, query?: string }): Promise<any> => {
+
+    if (subCategory === 'songs') {
+        const viewCount = await getVideoViewCount(sourceParams.id);
+        return viewCount;
+    }
+
+    if (subCategory === 'artists') {
+        const viewCount = await getChannelViewCount(sourceParams.id);
+        const numNewVideos = sourceParams.query ? await getNumNewVideos(sourceParams.query) : 0;
+        return { viewCount, numNewVideos };
+    }
+
 }
 
-const getViewCount = async (videoId: string): Promise<number> => {
+const getVideoViewCount = async (videoId: string): Promise<number> => {
     try {
         const response = await youtube.videos.list({
             part: ['statistics'],
@@ -31,3 +41,59 @@ const getViewCount = async (videoId: string): Promise<number> => {
         throw error;
     }
 };
+
+const getChannelViewCount = async (channelId: string): Promise<number> => {
+    try {
+        const response = await youtube.channels.list({
+            part: ['statistics'],
+            id: [channelId],
+        });
+
+        if (!response.data.items || response.data.items.length === 0) {
+            throw new Error('Channel not found');
+        }
+
+        const channel = response.data.items[0];
+        if (!channel.statistics || channel.statistics.viewCount == null) {
+            throw new Error('Channel statistics or view count not found');
+        }
+        return parseInt(channel.statistics.viewCount, 10);
+    } catch (error) {
+        console.error('Error fetching YouTube channel view count:', error);
+        throw error;
+    }
+}
+
+const getNumNewVideos = async (query: string): Promise<number> => {
+    try {
+        const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+        let totalVideoCount = 0;
+        let nextPageToken: string | undefined = undefined;
+
+        do {
+            const response = await youtube.search.list({
+                part: ['id'],
+                q: query,
+                publishedAfter: oneHourAgo,
+                type: ['video'],
+                maxResults: 50,
+                pageToken: nextPageToken,
+            });
+
+            if (!response.data.items) {
+                break;
+            }
+
+            totalVideoCount += response.data.items.length;
+
+            nextPageToken = response.data.nextPageToken;
+
+        } while (nextPageToken);
+
+        return totalVideoCount;
+
+    } catch (error) {
+        console.error('Error fetching number of new YouTube videos:', error);
+        throw error;
+    }
+}
