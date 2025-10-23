@@ -1,6 +1,13 @@
-export const fetchSpotifyData = async (db, indexId: number, sourceParams: { id: string, access_token: string, access_token_created_at: string }): Promise<number> => {
-    const popularity = await getPopularity(db, indexId, sourceParams.id, sourceParams.access_token, sourceParams.access_token_created_at);
-    return popularity;
+export const fetchSpotifyData = async (db, subCategory: string, indexId: number, sourceParams: { id: string, access_token: string, access_token_created_at: string }): Promise<any> => {
+    if (subCategory === 'songs') {
+        const popularity = await getPopularity(db, indexId, sourceParams.id, sourceParams.access_token, sourceParams.access_token_created_at);
+        return popularity;
+    }
+
+    if (subCategory === 'artists') {
+        const metrics = await fetchArtistMetrics(db, indexId, sourceParams.id, sourceParams.access_token, sourceParams.access_token_created_at);
+        return metrics;
+    }
 }
 
 const getPopularity = async (db, indexId: number, id: string, access_token: string, access_token_created_at: string): Promise<number> => {
@@ -49,6 +56,48 @@ const fetchTrackPopularity = async (trackId: string, accessToken: string): Promi
 
     } catch (error) {
         console.error('Error fetching track popularity:', error);
+        throw error;
+    }
+};
+
+const fetchArtistMetrics = async (db, indexId: number, artistId: string, access_token: string, access_token_created_at: string): Promise<{popularity: number, followers: number}> => {
+    try {
+        let currentToken = access_token;
+        const tokenCreatedAt = access_token_created_at ? new Date(access_token_created_at) : null;
+        const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+
+        if (!currentToken || !tokenCreatedAt || tokenCreatedAt < oneHourAgo) {
+            console.log('Access token expired or missing, fetching new one...');
+            currentToken = await getNewAccessToken(db, indexId);
+        }
+        
+        const response = await fetch(`https://api.spotify.com/v1/artists/${artistId}`, {
+            headers: {
+                'Authorization': `Bearer ${currentToken}`
+            }
+        });
+
+        if (!response.ok) {
+            if (response.status === 401) {
+                throw new Error('Spotify access token is invalid or expired');
+            }
+            throw new Error(`Spotify API error: ${response.status} ${response.statusText}`);
+        }
+
+        const artistData = await response.json();
+        
+        if (!artistData.popularity && artistData.popularity !== 0) {
+            throw new Error('Popularity data not available for this artist');
+        }
+
+        if (!artistData.followers || artistData.followers.total == null) {
+            throw new Error('Followers data not available for this artist');
+        }
+
+        return { popularity: artistData.popularity, followers: artistData.followers.total };
+
+    } catch (error) {
+        console.error('Error fetching artist metrics:', error);
         throw error;
     }
 };
