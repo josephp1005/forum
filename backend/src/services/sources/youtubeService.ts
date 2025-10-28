@@ -13,9 +13,9 @@ export const fetchYouTubeData = async (subCategory: string, sourceParams: { id: 
     }
 
     if (subCategory === 'artists') {
-        const viewCount = await getChannelViewCount(sourceParams.id);
+        //const viewCount = await getChannelViewCount(sourceParams.id);
         const numNewVideos = sourceParams.query ? await getNumNewVideos(sourceParams.query) : 0;
-        return { viewCount, numNewVideos };
+        return numNewVideos;
     }
 
 }

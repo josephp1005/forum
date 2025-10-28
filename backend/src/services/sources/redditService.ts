@@ -98,7 +98,7 @@ const getRedditEngagement = async (db, indexId: number, query: string, access_to
             after = paginatedData.data.after;
         }
 
-        return { metrics: { posts: totalPostCount, comments: totalCommentCount }, posts: postsContent };
+        return { metrics: totalPostCount, posts: postsContent };
         
     } catch (error) {
         console.error('Error fetching Reddit engagement:', error);

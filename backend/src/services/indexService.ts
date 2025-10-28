@@ -47,7 +47,7 @@ const refreshAttentionIndex = async (market_id: number) => {
 
                     console.log("YouTube metrics:", sourceResults[source]);
                     break;
-                case 'last.fm':
+                case 'lastfm':
                     sourceResults[source] = await fetchLastFmData(subCategory, sourceParams[source]);
 
                     console.log("Last.fm metrics:", sourceResults[source]);
@@ -101,6 +101,132 @@ const refreshAttentionIndex = async (market_id: number) => {
 
     await appendToIndex(indexId, currTimestamp, sourceResults, newsSourceResults);
 
+    await appendToTransformedIndex(indexId, currTimestamp, sourceResults, sourceParams);
+
+};
+
+const appendToTransformedIndex = async (
+    indexId: number,
+    timestamp: string,
+    metricsData: { [key: string]: number },
+    sourceParams: any
+) => {
+    const rebaseSources: string[] = [];
+    const updatedParams = JSON.parse(JSON.stringify(sourceParams));
+
+    const baseBySource: Record<string, number> = {};
+    const alreadyValidAtStart: Record<string, boolean> = {};
+
+    for (const source of Object.keys(metricsData)) {
+        const params = updatedParams[source] || {};
+        const wasValid = !!params.has_valid_data;
+        alreadyValidAtStart[source] = wasValid;
+
+        const type = params.type;
+        const value = metricsData[source];
+
+        if (type === "raw") {
+            baseBySource[source] = value;
+
+            if (!wasValid) {
+                rebaseSources.push(source);
+                updatedParams[source].has_valid_data = true;
+            }
+            updatedParams[source].prev = updatedParams[source].prev || {};
+            updatedParams[source].prev.value = value;
+
+        } else if (type === "difference_raw" || type === "difference_magnitude") {
+            const prev = (params.prev ?? {}) as { value?: number; diff?: number };
+            const prevRaw = typeof prev.value === "number" ? prev.value : null;
+            const prevDiff = typeof prev.diff === "number" ? prev.diff : null;
+
+            if (prevRaw !== null) {
+                const delta =
+                    type === "difference_raw" ? value - prevRaw : Math.abs(value - prevRaw);
+
+                if (delta > 0) {
+                    baseBySource[source] = delta;
+
+                    if (!wasValid) {
+                        rebaseSources.push(source);
+                        updatedParams[source].has_valid_data = true;
+                    }
+                    updatedParams[source].prev = updatedParams[source].prev || {};
+                    updatedParams[source].prev.diff = delta;
+                    updatedParams[source].prev.value = value;
+                } else {
+                    if (wasValid && prevDiff !== null) {
+                        baseBySource[source] = prevDiff; // carry forward last movement
+                    }
+                    updatedParams[source].prev = updatedParams[source].prev || {};
+                    updatedParams[source].prev.value = value;
+                }
+            } else {
+                // first observation --> record and wait for next tick to form a diff
+                updatedParams[source].prev = updatedParams[source].prev || {};
+                updatedParams[source].prev.value = value;
+            }
+        }
+    }
+
+    const existingBases: number[] = [];
+    for (const [src, x] of Object.entries(baseBySource)) {
+        if (alreadyValidAtStart[src]) existingBases.push(x);
+    }
+    const baselineIndex =
+        existingBases.length > 0
+            ? existingBases.reduce((a, b) => a + b, 0) / existingBases.length
+            : null;
+
+    const usedValues: Record<string, number> = {};
+    for (const [src, x] of Object.entries(baseBySource)) {
+        updatedParams[src] = updatedParams[src] || {};
+
+        const hadOffset = typeof updatedParams[src].rebase_offset === "number";
+        if (rebaseSources.includes(src)) {
+            // one-time offset: c = baseline - x (or 0 if no baseline yet)
+            const c = baselineIndex === null ? 0 : baselineIndex - x;
+            updatedParams[src].rebase_offset = c;
+        } else if (!hadOffset) {
+            updatedParams[src].rebase_offset = 0;
+        }
+
+        const c = updatedParams[src].rebase_offset || 0;
+        usedValues[src] = x + c; // this is the value used in the average
+    }
+
+    // final index value = average of all per-source used values
+    const vals = Object.values(usedValues);
+    const indexThisTick =
+        vals.length > 0 ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
+
+    const storageRow: Record<string, number> = { ...baseBySource, value: indexThisTick };
+
+    const { error: updateError } = await supabase
+        .from('indices')
+        .update({ attention_query_params: updatedParams })
+        .eq('id', indexId);
+
+    if (updateError) {
+        console.error('Error updating transformed index params:', updateError);
+        throw updateError;
+    }
+
+    // append the new data point to the transformed index
+    const { error: appendError } = await supabase.rpc(
+        'append_transformed_index_data',
+        {
+            p_index_id: indexId,
+            p_metrics_data: {
+                [timestamp]: storageRow
+            }
+        }
+    );
+
+    if (appendError) {
+        console.error('Error appending transformed index data:', appendError);
+        throw appendError;
+    }
 };
 
 const getIndexId = async (marketId: number) => {

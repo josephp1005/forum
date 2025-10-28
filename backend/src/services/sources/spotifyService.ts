@@ -60,7 +60,7 @@ const fetchTrackPopularity = async (trackId: string, accessToken: string): Promi
     }
 };
 
-const fetchArtistMetrics = async (db, indexId: number, artistId: string, access_token: string, access_token_created_at: string): Promise<{popularity: number, followers: number}> => {
+const fetchArtistMetrics = async (db, indexId: number, artistId: string, access_token: string, access_token_created_at: string): Promise<number> => {
     try {
         let currentToken = access_token;
         const tokenCreatedAt = access_token_created_at ? new Date(access_token_created_at) : null;
@@ -94,7 +94,8 @@ const fetchArtistMetrics = async (db, indexId: number, artistId: string, access_
             throw new Error('Followers data not available for this artist');
         }
 
-        return { popularity: artistData.popularity, followers: artistData.followers.total };
+        //return { popularity: artistData.popularity, followers: artistData.followers.total };
+        return artistData.followers.total;
 
     } catch (error) {
         console.error('Error fetching artist metrics:', error);
