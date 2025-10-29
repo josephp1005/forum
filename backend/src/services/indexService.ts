@@ -37,7 +37,7 @@ const refreshAttentionIndex = async (market_id: number) => {
             
             switch (source) {
                 case 'youtube':
-                    if (sourceParams[source] && timeToFetch(sourceParams[source].last_fetched_at, currTimestamp, sourceParams[source].fetch_frequency)) {
+                    if (sourceParams[source] && timeToFetch(sourceParams[source].last_fetched_at, currTimestamp, sourceParams[source].frequency)) {
                         sourceResults[source] = await fetchYouTubeData(subCategory, sourceParams[source]);
 
                         sourceParams[source].last_fetched_at = currTimestamp;
@@ -48,7 +48,7 @@ const refreshAttentionIndex = async (market_id: number) => {
 
                     break;
                 case 'lastfm':
-                    if (sourceParams[source] && timeToFetch(sourceParams[source].last_fetched_at, currTimestamp, sourceParams[source].fetch_frequency)) {
+                    if (sourceParams[source] && timeToFetch(sourceParams[source].last_fetched_at, currTimestamp, sourceParams[source].frequency)) {
                         sourceResults[source] = await fetchLastFmData(subCategory, sourceParams[source]);
 
                         sourceParams[source].last_fetched_at = currTimestamp;
@@ -59,7 +59,7 @@ const refreshAttentionIndex = async (market_id: number) => {
 
                     break;
                 case 'spotify':
-                    if (sourceParams[source] && timeToFetch(sourceParams[source].last_fetched_at, currTimestamp, sourceParams[source].fetch_frequency)) {
+                    if (sourceParams[source] && timeToFetch(sourceParams[source].last_fetched_at, currTimestamp, sourceParams[source].frequency)) {
                         sourceResults[source] = await fetchSpotifyData(supabase, subCategory, indexId, sourceParams[source]);
 
                         sourceParams[source].last_fetched_at = currTimestamp;
@@ -70,7 +70,7 @@ const refreshAttentionIndex = async (market_id: number) => {
 
                     break;
                 case 'deezer':
-                    if (sourceParams[source] && timeToFetch(sourceParams[source].last_fetched_at, currTimestamp, sourceParams[source].fetch_frequency)) {
+                    if (sourceParams[source] && timeToFetch(sourceParams[source].last_fetched_at, currTimestamp, sourceParams[source].frequency)) {
                         sourceResults[source] = await fetchDeezerData(sourceParams[source]);
 
                         sourceParams[source].last_fetched_at = currTimestamp;
@@ -81,7 +81,7 @@ const refreshAttentionIndex = async (market_id: number) => {
 
                     break;
                 case 'x':
-                    if (sourceParams[source] && timeToFetch(sourceParams[source].last_fetched_at, currTimestamp, sourceParams[source].fetch_frequency)) {
+                    if (sourceParams[source] && timeToFetch(sourceParams[source].last_fetched_at, currTimestamp, sourceParams[source].frequency)) {
                         sourceResults[source] = await fetchXData(sourceParams[source]);
 
                         sourceParams[source].last_fetched_at = currTimestamp;
@@ -99,7 +99,7 @@ const refreshAttentionIndex = async (market_id: number) => {
 
                     break;
                 case 'reddit':
-                    if (sourceParams[source] && timeToFetch(sourceParams[source].last_fetched_at, currTimestamp, sourceParams[source].fetch_frequency)) {
+                    if (sourceParams[source] && timeToFetch(sourceParams[source].last_fetched_at, currTimestamp, sourceParams[source].frequency)) {
                         const { metrics, posts } = await fetchRedditData(supabase, indexId, sourceParams[source]);
                         sourceResults[source] = metrics;
 
