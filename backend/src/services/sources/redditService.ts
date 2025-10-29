@@ -42,7 +42,7 @@ const getRedditEngagement = async (db, indexId: number, query: string, access_to
         let totalPostCount = 0;
         let totalCommentCount = 0;
 
-        const response = await fetch(`https://oauth.reddit.com/search?q=${encodeURIComponent(query)}&sort=hot&limit=100&t=hour`, {
+        const response = await fetch(`https://oauth.reddit.com/search?q=${encodeURIComponent(query)}&sort=relevance&limit=100&t=day`, {
             headers: {
                 'Authorization': `Bearer ${currentToken}`,
                 'User-Agent': process.env.REDDIT_USER_AGENT || 'Forum-Backend/1.0'
