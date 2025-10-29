@@ -77,7 +77,7 @@ const getRedditEngagement = async (db, indexId: number, query: string, access_to
 
         // Paginate through results if more are available
         while (after) {
-            const paginatedResponse = await fetch(`https://oauth.reddit.com/search?q=${encodeURIComponent(query)}&sort=hot&limit=100&t=hour&after=${after}`, {
+            const paginatedResponse = await fetch(`https://oauth.reddit.com/search?q=${encodeURIComponent(query)}&sort=relevance&limit=100&t=day&after=${after}`, {
                 headers: {
                     'Authorization': `Bearer ${currentToken}`,
                     'User-Agent': process.env.REDDIT_USER_AGENT || 'Forum-Backend/1.0'
