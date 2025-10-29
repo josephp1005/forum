@@ -7,6 +7,7 @@ import { fetchDeezerData } from './sources/deezerService.js';
 import { fetchXData, fetchXPosts } from './sources/xService.js';
 import { fetchNewsApiData } from './sources/newsApiService.js';
 import { fetchRedditData } from './sources/redditService.js';
+import { time } from 'console';
 
 const supabase = createClient(config.supabaseUrl, config.supabaseServiceRoleKey);
 
@@ -26,14 +27,7 @@ const refreshAttentionIndex = async (market_id: number) => {
     const sourceResults: { [key: string]: any } = {};
 
     const newsQueryParams = indexInfo.news_query_params;
-    const lastNewsFetch = indexInfo.last_news_fetch;
-    const newsFetchFrequency = indexInfo.news_fetch_frequency;
-    const newsFetchInterval = indexInfo.news_fetch_interval;
-    const fetchNews = indexInfo.track_news && shouldFetchNews(lastNewsFetch, currTimestamp, newsFetchFrequency);
-
-    if (fetchNews) {
-        await updateLastNewsFetch(supabase, indexId, currTimestamp);
-    }
+    const fetchNews = indexInfo.track_news;
 
     const newsSourceResults: { [key: string]: any } = {};
 
@@ -43,47 +37,92 @@ const refreshAttentionIndex = async (market_id: number) => {
             
             switch (source) {
                 case 'youtube':
-                    sourceResults[source] = await fetchYouTubeData(subCategory, sourceParams[source]);
+                    if (sourceParams[source] && timeToFetch(sourceParams[source].last_fetched_at, currTimestamp, sourceParams[source].fetch_frequency)) {
+                        sourceResults[source] = await fetchYouTubeData(subCategory, sourceParams[source]);
 
-                    console.log("YouTube metrics:", sourceResults[source]);
+                        sourceParams[source].last_fetched_at = currTimestamp;
+                        await updateMetricQueryParams(supabase, indexId, sourceParams);
+
+                        console.log("YouTube metrics:", sourceResults[source]);
+                    }
+
                     break;
                 case 'lastfm':
-                    sourceResults[source] = await fetchLastFmData(subCategory, sourceParams[source]);
+                    if (sourceParams[source] && timeToFetch(sourceParams[source].last_fetched_at, currTimestamp, sourceParams[source].fetch_frequency)) {
+                        sourceResults[source] = await fetchLastFmData(subCategory, sourceParams[source]);
 
-                    console.log("Last.fm metrics:", sourceResults[source]);
+                        sourceParams[source].last_fetched_at = currTimestamp;
+                        await updateMetricQueryParams(supabase, indexId, sourceParams);
+
+                        console.log("Last.fm metrics:", sourceResults[source]);
+                    }
+
                     break;
                 case 'spotify':
-                    sourceResults[source] = await fetchSpotifyData(supabase, subCategory, indexId, sourceParams[source]);
+                    if (sourceParams[source] && timeToFetch(sourceParams[source].last_fetched_at, currTimestamp, sourceParams[source].fetch_frequency)) {
+                        sourceResults[source] = await fetchSpotifyData(supabase, subCategory, indexId, sourceParams[source]);
 
-                    console.log("Spotify metrics:", sourceResults[source]);
+                        sourceParams[source].last_fetched_at = currTimestamp;
+                        await updateMetricQueryParams(supabase, indexId, sourceParams);
+
+                        console.log("Spotify metrics:", sourceResults[source]);
+                    }
+
                     break;
                 case 'deezer':
-                    sourceResults[source] = await fetchDeezerData(sourceParams[source]);
+                    if (sourceParams[source] && timeToFetch(sourceParams[source].last_fetched_at, currTimestamp, sourceParams[source].fetch_frequency)) {
+                        sourceResults[source] = await fetchDeezerData(sourceParams[source]);
 
-                    console.log("Deezer metrics:", sourceResults[source]);
+                        sourceParams[source].last_fetched_at = currTimestamp;
+                        await updateMetricQueryParams(supabase, indexId, sourceParams);
+
+                        console.log("Deezer metrics:", sourceResults[source]);
+                    }
+
                     break;
                 case 'x':
-                    sourceResults[source] = await fetchXData(sourceParams[source]);
+                    if (sourceParams[source] && timeToFetch(sourceParams[source].last_fetched_at, currTimestamp, sourceParams[source].fetch_frequency)) {
+                        sourceResults[source] = await fetchXData(sourceParams[source]);
 
-                    if (fetchNews && newsQueryParams[source]) {
-                        newsSourceResults[source] = await fetchXPosts(newsQueryParams[source], newsFetchInterval);
+                        sourceParams[source].last_fetched_at = currTimestamp;
+                        await updateMetricQueryParams(supabase, indexId, sourceParams);
+
+                        console.log("X metrics:", sourceResults[source]);
                     }
 
-                    console.log("X metrics:", sourceResults[source]);
+                    if (fetchNews && newsQueryParams[source] && timeToFetch(newsQueryParams[source].last_fetched_at, currTimestamp, newsQueryParams[source].frequency)) {
+                        newsSourceResults[source] = await fetchXPosts(newsQueryParams[source], newsQueryParams[source].interval);
+
+                        newsQueryParams[source].last_fetched_at = currTimestamp;
+                        await updateNewsQueryParams(supabase, indexId, newsQueryParams);
+                    }
+
                     break;
                 case 'reddit':
-                    const { metrics, posts } = await fetchRedditData(supabase, indexId, sourceParams[source]);
-                    sourceResults[source] = metrics;
-                    
-                    if (fetchNews) {
-                        newsSourceResults[source] = posts;
+                    if (sourceParams[source] && timeToFetch(sourceParams[source].last_fetched_at, currTimestamp, sourceParams[source].fetch_frequency)) {
+                        const { metrics, posts } = await fetchRedditData(supabase, indexId, sourceParams[source]);
+                        sourceResults[source] = metrics;
+
+                        sourceParams[source].last_fetched_at = currTimestamp;
+                        await updateMetricQueryParams(supabase, indexId, sourceParams);
+
+                        if (fetchNews && timeToFetch(newsQueryParams[source].last_fetched_at, currTimestamp, newsQueryParams[source].frequency)) {
+                            newsSourceResults[source] = posts;
+
+                            newsQueryParams[source].last_fetched_at = currTimestamp;
+                            await updateNewsQueryParams(supabase, indexId, newsQueryParams);
+                        }
+
+                        console.log("Reddit metrics:", sourceResults[source]);
                     }
 
-                    console.log("Reddit metrics:", sourceResults[source]);
                     break;
                 case 'newsapi':
-                    if (fetchNews && newsQueryParams[source]) {
-                        newsSourceResults[source] = await fetchNewsApiData(supabase, indexId, newsQueryParams[source], newsFetchInterval, currTimestamp);
+                    if (fetchNews && newsQueryParams[source] && timeToFetch(newsQueryParams[source].last_fetched_at, currTimestamp, newsQueryParams[source].frequency)) {
+                        newsSourceResults[source] = await fetchNewsApiData(supabase, indexId, newsQueryParams[source], newsQueryParams[source].interval, currTimestamp);
+
+                        newsQueryParams[source].last_fetched_at = currTimestamp;
+                        await updateNewsQueryParams(supabase, indexId, newsQueryParams);
                     }
 
                     break;
@@ -91,9 +130,7 @@ const refreshAttentionIndex = async (market_id: number) => {
                     console.warn(`Unknown source: ${source}`);
                     break;
             }
-            
-            console.log("Successfully fetched data for ", source);
-            
+                        
         } catch (error) {
             console.error(`Error fetching data from ${source}:`, error);
         }
@@ -117,6 +154,12 @@ const appendToTransformedIndex = async (
     const baseBySource: Record<string, number> = {};
     const alreadyValidAtStart: Record<string, boolean> = {};
 
+    for (const source of Object.keys(sourceParams)) {
+        if (!(source in metricsData)) {
+            metricsData[source] = sourceParams[source].prev?.value || null;
+        }
+    }
+
     for (const source of Object.keys(metricsData)) {
         const params = updatedParams[source] || {};
         const wasValid = !!params.has_valid_data;
@@ -124,6 +167,10 @@ const appendToTransformedIndex = async (
 
         const type = params.type;
         const value = metricsData[source];
+
+        if (value === null) {
+            continue;
+        }
 
         if (type === "raw") {
             baseBySource[source] = value;
@@ -253,7 +300,7 @@ const getIndexInfo = async (indexId: number) => {
     try {
         const { data, error } = await supabase
             .from('indices')
-            .select('attention_sources, attention_query_params, track_news, last_news_fetch, news_fetch_frequency, news_fetch_interval, news_query_params')
+            .select('attention_sources, attention_query_params, track_news, news_query_params')
             .eq('id', indexId)
             .single();
 
@@ -334,30 +381,48 @@ const getMarketSubCategory = async (marketId: number): Promise<string> => {
     }
 }
 
-const shouldFetchNews = (lastFetch: string | null, currTimestamp: string, newsFetchFrequency: number): boolean => {
+const timeToFetch = (lastFetch: string | null, currTimestamp: string, fetchFrequency: number): boolean => {
     if (!lastFetch) return true;
 
     const lastFetchTime = new Date(lastFetch).getTime();
     const currTime = new Date(currTimestamp).getTime();
 
-    const frequency = newsFetchFrequency * 1000;
+    const frequency = fetchFrequency * 1000;
     return (currTime - lastFetchTime) >= frequency;
 }
 
-const updateLastNewsFetch = async (db, indexId: number, timestamp: string): Promise<void> => {
+const updateNewsQueryParams = async (db, indexId: number, newsQueryParams: any): Promise<void> => {
     try {
         const { error: updateError } = await db
             .from('indices')
-            .update({ last_news_fetch: timestamp })
+            .update({ news_query_params: newsQueryParams })
             .eq('id', indexId);
 
         if (updateError) {
-            console.error('Error updating last news fetch timestamp:', updateError);
+            console.error('Error updating news query params:', updateError);
             throw updateError;
         }
 
     } catch (error) {
-        console.error('Error in updating last news fetch timestamp:', error);
+        console.error('Error in updating news query params:', error);
+        throw error;
+    }
+};
+
+const updateMetricQueryParams = async (db, indexId: number, metricQueryParams: any): Promise<void> => {
+    try {
+        const { error: updateError } = await db
+            .from('indices')
+            .update({ attention_query_params: metricQueryParams })
+            .eq('id', indexId);
+
+        if (updateError) {
+            console.error('Error updating attention query params:', updateError);
+            throw updateError;
+        }
+
+    } catch (error) {
+        console.error('Error in updating attention query params:', error);
         throw error;
     }
 };
