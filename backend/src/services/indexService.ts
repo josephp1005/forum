@@ -7,7 +7,6 @@ import { fetchDeezerData } from './sources/deezerService.js';
 import { fetchXData, fetchXPosts } from './sources/xService.js';
 import { fetchNewsApiData } from './sources/newsApiService.js';
 import { fetchRedditData } from './sources/redditService.js';
-import { time } from 'console';
 
 const supabase = createClient(config.supabaseUrl, config.supabaseServiceRoleKey);
 

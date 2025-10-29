@@ -1,5 +1,10 @@
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip } from "recharts";
-import { AttentionDataPoint } from "../services/twitterApi";
+
+interface AttentionDataPoint {
+  timestamp: string;
+  tweet_count: number;
+  score: number;
+}
 
 interface ChartDataPoint {
   day: string;
@@ -12,9 +17,10 @@ interface ChartDataPoint {
 
 interface AttentionChartProps {
   market: {
-    id?: string;
+    id?: string | number;
     name: string;
-    price: number;
+    last_price?: number;
+    index_price?: number;
   };
   events?: Array<{
     date: string;
@@ -31,7 +37,7 @@ export function AttentionChart({ market, events = [], realTimeData = [], isRealT
   const generateFakeAttentionData = (): ChartDataPoint[] => {
     const data: ChartDataPoint[] = [];
     const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-    let baseScore = market.price - 100;
+    let baseScore = (market.last_price || market.index_price || 100) - 100;
     
     days.forEach((day, index) => {
       // Simulate organic growth with some volatility
@@ -79,7 +85,7 @@ export function AttentionChart({ market, events = [], realTimeData = [], isRealT
       
       return {
         day: `${dayName} ${timeLabel}`,
-        score: point.attention_score,
+        score: point.score,
         tweet_count: point.tweet_count,
         timestamp: point.timestamp,
         hasEvent: false, // No events for real-time data

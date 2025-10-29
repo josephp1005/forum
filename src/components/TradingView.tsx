@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "./ui/card";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -8,18 +8,10 @@ import { ChartKind } from "./TradingChart";
 import TradingChart from "./TradingChart";
 import { OrderBook } from "./OrderBook";
 import UTCClock from "./UTCClock";
+import { MarketWithCalculatedFields } from "../types/market";
 
 interface TradingViewProps {
-  market: {
-    id: string;
-    name: string;
-    category: string;
-    price: number;
-    change: number;
-    changePercent: number;
-    volume: string;
-    image: string;
-  };
+  market: MarketWithCalculatedFields;
 }
 
 export function TradingView({ market }: TradingViewProps) {
@@ -81,7 +73,6 @@ export function TradingView({ market }: TradingViewProps) {
 
           <div className="flex-1">
             <TradingChart
-              market={market}
               height={445}
               kind={chartKind}
               showVolume={showVolume}
@@ -120,7 +111,7 @@ export function TradingView({ market }: TradingViewProps) {
             
             <TabsContent value="orderbook" className="flex-1 mt-4 overflow-hidden">
               <div className="h-full max-h-[500px] overflow-y-auto">
-                <OrderBook currentPrice={market.price} spread={0.12} />
+                <OrderBook currentPrice={market.last_price || 0} spread={0.12} />
               </div>
             </TabsContent>
             
@@ -192,7 +183,7 @@ export function TradingView({ market }: TradingViewProps) {
               <TabsContent value="limit" className="space-y-4 pt-4">
                 <div>
                   <label className="text-sm font-medium">Price (USD)</label>
-                  <Input value={price} onChange={(e) => setPrice(e.target.value)} placeholder={market.price.toFixed(2)} />
+                  <Input value={price} onChange={(e) => setPrice(e.target.value)} placeholder={(market.last_price || 0).toFixed(2)} />
                 </div>
                 <div>
                   <label className="text-sm font-medium">Amount (USD)</label>

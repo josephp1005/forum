@@ -1,12 +1,14 @@
 import { useState, useEffect } from "react";
 import { Header } from "./components/Header";
 import { CategorySection } from "./components/CategorySection";
+import { MarketCard } from "./components/MarketCard";
 import { MarketDetail } from "./components/MarketDetail";
 import { Card } from "./components/ui/card";
 import { Badge } from "./components/ui/badge";
 import { Button } from "./components/ui/button";
-
 import { TrendingUp, TrendingDown, Activity, Plus } from "lucide-react";
+import { api } from "./services/api";
+import { Market, MarketWithCalculatedFields, enrichMarketData, MarketSubCategory } from "./types/market";
 
 const mockMarkets = {
   trending: {
@@ -205,27 +207,57 @@ const mockMarkets = {
 };
 
 function App() {
-  const [selectedMarket, setSelectedMarket] = useState<any>(null);
-  const [activeCategory, setActiveCategory] = useState("trending");
+  const [selectedMarket, setSelectedMarket] = useState<MarketWithCalculatedFields | null>(null);
+  const [activeCategory, setActiveCategory] = useState("music");
   const [activeSubcategory, setActiveSubcategory] = useState<string>("");
+  const [markets, setMarkets] = useState<MarketWithCalculatedFields[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  // Fetch markets on component mount
+  useEffect(() => {
+    fetchMarkets();
+  }, []);
   
   // Reset subcategory when main category changes
   useEffect(() => {
     setActiveSubcategory("");
   }, [activeCategory]);
   
-  // Flatten all markets for easy lookup
-  const allMarkets = [
-    ...Object.values(mockMarkets.trending).flat(),
-    ...Object.values(mockMarkets.entertainment).flat(),
-    ...Object.values(mockMarkets.sports).flat(),
-    ...Object.values(mockMarkets.politics).flat(),
-    ...Object.values(mockMarkets.gaming).flat(),
-    ...Object.values(mockMarkets.music).flat()
-  ];
+  const fetchMarkets = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const fetchedMarkets = await api.fetchMarkets();
+      const enrichedMarkets = fetchedMarkets.map(enrichMarketData);
+      setMarkets(enrichedMarkets);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch markets');
+      console.error('Error fetching markets:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
   
-  const handleMarketClick = (marketId: string) => {
-    const market = allMarkets.find(m => m.id === marketId);
+  // Filter markets by category and subcategory
+  const getFilteredMarkets = () => {
+    let filtered = markets;
+    
+    // Filter by category (for now, all are music)
+    if (activeCategory !== "music") {
+      return [];
+    }
+    
+    // Filter by subcategory if selected
+    if (activeSubcategory) {
+      filtered = filtered.filter(market => market.sub_category === activeSubcategory);
+    }
+    
+    return filtered;
+  };
+  
+  const handleMarketClick = (marketId: number) => {
+    const market = markets.find(m => m.id === marketId);
     if (market) {
       setSelectedMarket(market);
     }
@@ -245,12 +277,58 @@ function App() {
   }
   
   const renderCategoryContent = () => {
-    const categoryData = mockMarkets[activeCategory as keyof typeof mockMarkets];
-    if (!categoryData) return null;
+    if (loading) {
+      return (
+        <div className="flex items-center justify-center p-8">
+          <div className="text-gray-500">Loading markets...</div>
+        </div>
+      );
+    }
     
-    const subcategories = Object.keys(categoryData);
-    const currentSubcategory = activeSubcategory || subcategories[0];
-    const markets = categoryData[currentSubcategory as keyof typeof categoryData] || [];
+    if (error) {
+      return (
+        <div className="flex flex-col items-center justify-center p-8">
+          <div className="text-red-500 mb-4">Error loading markets: {error}</div>
+          <Button onClick={fetchMarkets} variant="outline">
+            Retry
+          </Button>
+        </div>
+      );
+    }
+    
+    const filteredMarkets = getFilteredMarkets();
+    
+    if (filteredMarkets.length === 0) {
+      return (
+        <div className="flex items-center justify-center p-8">
+          <div className="text-gray-500">No markets found</div>
+        </div>
+      );
+    }
+    
+    // Group markets by subcategory
+    const groupedMarkets: { [key: string]: MarketWithCalculatedFields[] } = {
+      "All Markets": filteredMarkets
+    };
+    
+    if (!activeSubcategory) {
+      // Group by subcategory when showing all
+      const bySubcategory = filteredMarkets.reduce((acc, market) => {
+        const key = market.sub_category.charAt(0).toUpperCase() + market.sub_category.slice(1);
+        if (!acc[key]) acc[key] = [];
+        acc[key].push(market);
+        return acc;
+      }, {} as { [key: string]: MarketWithCalculatedFields[] });
+      
+      Object.assign(groupedMarkets, bySubcategory);
+    }
+    
+    // Get subcategories for navigation
+    const subcategories = ["All", MarketSubCategory.ARTISTS, MarketSubCategory.ALBUMS, MarketSubCategory.SONGS];
+    const currentSubcategory = activeSubcategory || "All";
+    const displayMarkets = activeSubcategory ? 
+      filteredMarkets.filter(m => m.sub_category === activeSubcategory) : 
+      filteredMarkets;
     
     return (
       <div>
@@ -262,25 +340,29 @@ function App() {
                 key={subcategory}
                 variant={currentSubcategory === subcategory ? "secondary" : "ghost"}
                 size="sm"
-                onClick={() => setActiveSubcategory(subcategory)}
+                onClick={() => setActiveSubcategory(subcategory === "All" ? "" : subcategory)}
                 className={`rounded-full px-4 py-2 ${
                   currentSubcategory === subcategory 
                     ? "bg-blue-100 text-blue-800 hover:bg-blue-200" 
                     : "text-gray-600 hover:bg-gray-100"
                 }`}
               >
-                {subcategory}
+                {subcategory.charAt(0).toUpperCase() + subcategory.slice(1)}
               </Button>
             ))}
           </div>
         </div>
         
-        {/* Markets Grid */}
-        <CategorySection 
-          title="" 
-          markets={markets} 
-          onMarketClick={handleMarketClick} 
-        />
+        {/* Market Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {displayMarkets.map((market) => (
+            <MarketCard
+              key={market.id}
+              market={market}
+              onClick={() => handleMarketClick(market.id)}
+            />
+          ))}
+        </div>
       </div>
     );
   };

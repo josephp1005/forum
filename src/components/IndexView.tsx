@@ -4,18 +4,10 @@ import { Button } from "./ui/button";
 import { TrendingUp, TrendingDown, ExternalLink, Calendar, RefreshCw } from "lucide-react";
 import { AttentionChart } from "./AttentionChart";
 import { AttentionSources } from "./AttentionSources";
-import { useAttentionData, useFormattedTimeRemaining } from "../hooks/useAttentionData";
+import { MarketWithCalculatedFields } from "../types/market";
 
 interface IndexViewProps {
-  market: {
-    id: string;
-    name: string;
-    category: string;
-    price: number;
-    change: number;
-    changePercent: number;
-    spot_price: number
-  };
+  market: MarketWithCalculatedFields;
 }
 
 export function IndexView({ market }: IndexViewProps) {
@@ -118,7 +110,7 @@ export function IndexView({ market }: IndexViewProps) {
           <div className="mt-4 grid grid-cols-4 gap-4 pt-4 border-t">
             <div className="text-center">
               <p className="text-lg font-bold text-gray-900">
-                {market.spot_price.toFixed(0)}
+                {market.index_price.toFixed(0)}
               </p>
               <p className="text-xs text-gray-500">Current Score</p>
             </div>
