@@ -34,7 +34,7 @@ export function MarketDetail({ market, onBack }: MarketDetailProps) {
               
               <div className="flex items-center gap-3">
                 <img 
-                  src="/placeholder-icon.svg"
+                  src={market.picture}
                   alt={market.name}
                   className="w-8 h-8 rounded-full object-cover"
                 />

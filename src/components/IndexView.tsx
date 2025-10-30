@@ -1,152 +1,145 @@
+import { useState, useEffect } from "react";
 import { Card } from "./ui/card";
-import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
-import { TrendingUp, TrendingDown, ExternalLink, Calendar, RefreshCw } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import { AttentionChart } from "./AttentionChart";
 import { AttentionSources } from "./AttentionSources";
-import { MarketWithCalculatedFields } from "../types/market";
+import { NarrativeSection } from "./NarrativeSection";
+import { MarketWithCalculatedFields, IndexData } from "../types/market";
+import { NarrativeTimeframe } from "../types/narrative";
+import { api } from "../services/api";
 
 interface IndexViewProps {
   market: MarketWithCalculatedFields;
 }
 
 export function IndexView({ market }: IndexViewProps) {
-  // Check if this is LeBron James market for real-time data
-  
-  const mockNews = [
-    {
-      id: 1,
-      title: `${market.name} Breaks Internet with Latest Announcement`,
-      source: "Entertainment Weekly",
-      time: "2 hours ago",
-      impact: "high",
-      summary: "Major cultural moment drives unprecedented social media engagement"
-    },
-    {
-      id: 2,
-      title: `Trending on TikTok: ${market.name} Challenge Goes Viral`,
-      source: "Social Media Today",
-      time: "4 hours ago",
-      impact: "medium",
-      summary: "User-generated content spreads across platforms"
-    },
-    {
-      id: 3,
-      title: `Google Search Spike: ${market.name} Reaches Peak Interest`,
-      source: "Digital Trends",
-      time: "6 hours ago",
-      impact: "medium",
-      summary: "Search volume increases 340% in past 24 hours"
-    },
-    {
-      id: 4,
-      title: `${market.name} Merchandise Sales Surge Following Latest Event`,
-      source: "Retail Wire",
-      time: "8 hours ago",
-      impact: "low",
-      summary: "Commercial activity indicates sustained attention"
-    }
-  ];
+  const [indexData, setIndexData] = useState<IndexData | null>(null);
+  const [currentTimeframe, setCurrentTimeframe] = useState('3h');
+  const [narrativeTimeframe, setNarrativeTimeframe] = useState<NarrativeTimeframe>('1d');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const mockEvents = [
-    {
-      date: "2025-09-25",
-      event: "Team Trade Announcement",
-      impact: "+15.2%",
-      description: "Major announcement drives attention spike"
-    },
-    {
-      date: "2025-09-20",
-      event: "Viral TikTok Moment",
-      impact: "+8.7%",
-      description: "Organic social media moment"
-    },
-    {
-      date: "2025-09-15",
-      event: "Award Show Performance",
-      impact: "+12.4%",
-      description: "Prime time television exposure"
-    }
-  ];
+  // Fetch index data when component mounts or timeframe changes
+  useEffect(() => {
+    fetchIndexData();
+  }, [market.id, currentTimeframe]);
 
-  const getImpactColor = (impact: string) => {
-    switch (impact) {
-      case "high": return "bg-red-100 text-red-800";
-      case "medium": return "bg-orange-100 text-orange-800";
-      case "low": return "bg-blue-100 text-blue-800";
-      default: return "bg-gray-100 text-gray-800";
+  const fetchIndexData = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const data = await api.fetchIndexData(market.id, currentTimeframe);
+      setIndexData(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch index data');
+      console.error('Error fetching index data:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleTimeframeChange = (timeframe: string) => {
+    setCurrentTimeframe(timeframe);
+  };
+
+  const handleNarrativeTimeframeChange = (timeframe: NarrativeTimeframe) => {
+    setNarrativeTimeframe(timeframe);
+  };
+
+  const handleRefreshIndex = async () => {
+    try {
+      setIsLoading(true);
+      //await api.refreshIndex(market.id);
+      // Fetch fresh data after refresh
+      await fetchIndexData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to refresh index');
+      console.error('Error refreshing index:', err);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="grid grid-cols-12 grid-rows-[1fr_1fr] mb-2 gap-3 p-1 min-h-[calc(100vh-80px)]">
+    <div className="grid grid-cols-12 mb-2 gap-3 p-1 min-h-[calc(100vh-80px)]">
       
       {/* 1. Attention Over Time Chart (Top-Left) */}
-      <div className="col-span-8 row-span-1">
+      <div className="col-span-8 h-[600px]">
         <Card className="flex flex-col h-full p-4">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-0">
             <div className="flex items-center gap-3">
               <h3 className="font-semibold">
                 Attention Over Time
               </h3>
+              {error && (
+                <div className="text-red-600 text-sm">{error}</div>
+              )}
             </div>
-            
             <div className="flex items-center gap-2">
-              <button className="px-3 py-1 text-sm bg-blue-600 text-white rounded">7D</button>
-              <button className="px-3 py-1 text-sm bg-gray-100 text-gray-600 rounded">30D</button>
-              <button className="px-3 py-1 text-sm bg-gray-100 text-gray-600 rounded">90D</button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRefreshIndex}
+                disabled={isLoading}
+                className="h-8 px-3"
+              >
+                <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+                {isLoading ? 'Refreshing...' : 'Refresh'}
+              </Button>
             </div>
           </div>
           
           <div className="flex-1">
             <AttentionChart 
-              market={market} 
-              events={mockEvents}
-              isRealTimeMode={false}
+              indexData={indexData || undefined}
+              onTimeframeChange={handleTimeframeChange}
+              currentTimeframe={currentTimeframe}
+              isLoading={isLoading}
             />
           </div>
           
           {/* Stats bar at bottom */}
-          <div className="mt-4 grid grid-cols-4 gap-4 pt-4 border-t">
+          <div className="mt-0 grid grid-cols-3 gap-4 pt-4 border-t">
             <div className="text-center">
               <p className="text-lg font-bold text-gray-900">
-                {market.index_price.toFixed(0)}
+                {indexData?.metrics.current.toFixed(0) || market.index_price.toFixed(0)}
               </p>
               <p className="text-xs text-gray-500">Current Score</p>
             </div>
             <div className="text-center">
               <p className="text-lg font-bold text-gray-900">
-                {'1,247'}
+                {indexData?.metrics.peak.toFixed(0) || '--'}
               </p>
-              <p className="text-xs text-gray-500">Peak (7d)</p>
+              <p className="text-xs text-gray-500">Peak</p>
             </div>
             <div className="text-center">
-              <p className="text-lg font-bold text-green-600">
-                +23.4%
+              <p className={`text-lg font-bold ${(indexData?.metrics.changePercent || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                {indexData?.metrics.changePercent !== undefined 
+                  ? `${indexData.metrics.changePercent >= 0 ? '+' : ''}${indexData.metrics.changePercent.toFixed(1)}%`
+                  : '--'
+                }
               </p>
-              <p className="text-xs text-gray-500">
-                {'24h'}
-              </p>
-            </div>
-            <div className="text-center">
-              <p className="text-lg font-bold text-gray-900">#12</p>
-              <p className="text-xs text-gray-500">Rank</p>
+              <p className="text-xs text-gray-500">Change</p>
             </div>
           </div>
         </Card>
       </div>
 
       {/* 2. Attention Sources (Top-Right, Scrollable) */}
-      <div className="col-span-4 row-span-1">
+      <div className="col-span-4 h-[600px]">
         <Card className="flex flex-col h-full p-4">
-          <h3 className="font-semibold mb-4">Attention Sources</h3>
+          <h3 className="font-semibold mb-1">Attention Sources</h3>
           <div className="flex-1 overflow-y-auto max-h-[400px]">
-            <AttentionSources />
+            <AttentionSources 
+              indexData={indexData || undefined}
+              isLoading={isLoading}
+            />
           </div>
         </Card>
       </div>
 
-      {/* 3. Key Events (Bottom-Left, Scrollable) */}
+      {/* 3. Key Events (Bottom-Left, Scrollable)
       <div className="col-span-6 row-span-1">
         <Card className="flex flex-col h-full p-4">
           <h3 className="font-semibold mb-4">Key Events (Last 30 Days)</h3>
@@ -171,36 +164,15 @@ export function IndexView({ market }: IndexViewProps) {
           </div>
         </Card>
       </div>
+      */}
 
       {/* 4. Recent News & Mentions (Bottom-Right, Scrollable) */}
-      <div className="col-span-6 row-span-1">
-        <Card className="flex flex-col h-full p-4">
-          <h3 className="font-semibold mb-4">Recent News & Mentions</h3>
-          <div className="flex-1 overflow-y-auto max-h-[420px]">
-            <div className="space-y-4">
-              {mockNews.map((article) => (
-                <div key={article.id} className="border-b border-gray-100 pb-4 last:border-b-0">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <Badge variant="outline" className={getImpactColor(article.impact)}>
-                          {article.impact} impact
-                        </Badge>
-                        <span className="text-sm text-gray-500">{article.time}</span>
-                      </div>
-                      <h4 className="font-medium text-sm mb-1">{article.title}</h4>
-                      <p className="text-sm text-gray-600 mb-2">{article.summary}</p>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-gray-500">{article.source}</span>
-                        <ExternalLink className="w-3 h-3 text-gray-400" />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </Card>
+      <div className="col-span-12 row-span-1">
+        <NarrativeSection
+          marketId={market.id.toString()}
+          timeframe={narrativeTimeframe}
+          onTimeframeChange={handleNarrativeTimeframeChange}
+        />
       </div>
     </div>
   );

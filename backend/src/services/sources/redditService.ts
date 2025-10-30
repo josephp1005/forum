@@ -28,6 +28,76 @@ export const fetchRedditData = async (db, indexId: number, sourceParams: { query
     return engagementScore;
 }
 
+export const standardizeRedditPosts = async (redditData: any[], sourceParams: any, timeframe: string): Promise<any[]> => {
+    const standardizedPosts: any[] = [];
+    
+    if (!Array.isArray(redditData)) {
+        return standardizedPosts;
+    }
+
+    // Calculate timeframe cutoff for precise filtering
+    const now = new Date();
+    let cutoffTime: Date;
+    
+    const timeMatch = timeframe.match(/^(\d+)([mhd])$/);
+    if (!timeMatch) {
+        cutoffTime = new Date(now.getTime() - 24 * 60 * 60 * 1000); // Default to 24h
+    } else {
+        const [, amount, unit] = timeMatch;
+        const multiplier = parseInt(amount);
+        
+        switch (unit) {
+            case 'm':
+                cutoffTime = new Date(now.getTime() - multiplier * 60 * 1000);
+                break;
+            case 'h':
+                cutoffTime = new Date(now.getTime() - multiplier * 60 * 60 * 1000);
+                break;
+            case 'd':
+                cutoffTime = new Date(now.getTime() - multiplier * 24 * 60 * 60 * 1000);
+                break;
+            default:
+                cutoffTime = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+        }
+    }
+
+    for (const post of redditData) {
+        try {
+            // Filter by publication time (convert Unix timestamp to Date)
+            const postTime = new Date(post.created_utc * 1000);
+            if (postTime < cutoffTime) {
+                continue;
+            }
+
+            // Prepare metrics
+            const metrics = {
+                score: post.score || 0,
+                comments: post.comments || 0
+            };
+
+            standardizedPosts.push({
+                type: 'post',
+                time: postTime.toISOString(),
+                author: post.author || 'Unknown',
+                source: 'Reddit',
+                has_title: true,
+                title: post.title || '',
+                body: post.body || '',
+                url: post.url || '',
+                metrics: metrics,
+                picture: sourceParams.picture || null,
+                id: 'reddit-' + post.url
+            });
+
+        } catch (error) {
+            console.error('Error standardizing Reddit post:', error);
+            continue;
+        }
+    }
+
+    return standardizedPosts;
+};
+
 const getRedditEngagement = async (db, indexId: number, query: string, access_token: string, access_token_expires_at: string): Promise<{ metrics: any, posts: any[]}> => {
     try {
         let currentToken = access_token;

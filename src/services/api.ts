@@ -1,4 +1,5 @@
-import { Market } from '../types/market';
+import { MarketSummary, Market, IndexData } from '../types/market';
+import { NarrativeResponse } from '../types/narrative';
 
 const API_BASE_URL = 'http://localhost:3001/api';
 
@@ -59,19 +60,29 @@ async function apiRequest<T>(
 }
 
 export const api = {
-  // Markets API
+  // Markets API - returns lightweight market data for home page
   async fetchMarkets() {
-    return apiRequest<Market[]>('/markets');
+    return apiRequest<MarketSummary[]>('/markets');
   },
 
-  // Index API  
-  async fetchIndex(marketId: number) {
-    return apiRequest<any>(`/index/markets/${marketId}`);
+  // Full market data for individual market pages
+  async fetchFullMarket(marketId: number) {
+    return apiRequest<Market>(`/markets/${marketId}/full`);
+  },
+
+  // Index API with timeframe filtering
+  async fetchIndexData(marketId: number, timeframe: string = '3h') {
+    return apiRequest<IndexData>(`/index/${marketId}?timeframe=${timeframe}`);
+  },
+
+  // Narrative API with timeframe filtering
+  async fetchNarrativeData(marketId: number, timeframe: string = '1d') {
+    return apiRequest<NarrativeResponse>(`/index/${marketId}/narrative?timeframe=${timeframe}`);
   },
 
   async refreshIndex(marketId: number) {
-    return apiRequest<any>(`/index/markets/${marketId}/refresh`, {
-      method: 'PUT',
+    return apiRequest<any>(`/index/${marketId}/refresh`, {
+      method: 'POST',
     });
   },
 };

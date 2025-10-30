@@ -1,198 +1,147 @@
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip } from "recharts";
-
-interface AttentionDataPoint {
-  timestamp: string;
-  tweet_count: number;
-  score: number;
-}
+import { Button } from "./ui/button";
+import { IndexData, TransformedIndex } from "../types/market";
+import { RefreshCw } from "lucide-react";
 
 interface ChartDataPoint {
-  day: string;
+  timestamp: string;
+  time: string;
   score: number;
-  tweet_count?: number;
-  timestamp?: string;
-  hasEvent: boolean;
-  eventData: { name: string; impact: string } | null;
+  date: Date;
 }
 
 interface AttentionChartProps {
-  market: {
-    id?: string | number;
-    name: string;
-    last_price?: number;
-    index_price?: number;
-  };
-  events?: Array<{
-    date: string;
-    event: string;
-    impact: string;
-    description: string;
-  }>;
-  realTimeData?: AttentionDataPoint[];
-  isRealTimeMode?: boolean;
+  indexData?: IndexData;
+  onTimeframeChange?: (timeframe: string) => void;
+  currentTimeframe?: string;
+  isLoading?: boolean;
 }
 
-export function AttentionChart({ market, events = [], realTimeData = [], isRealTimeMode = false }: AttentionChartProps) {
-  // Generate fake attention score data for non-real-time markets
-  const generateFakeAttentionData = (): ChartDataPoint[] => {
-    const data: ChartDataPoint[] = [];
-    const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-    let baseScore = (market.last_price || market.index_price || 100) - 100;
+const TIMEFRAMES = [
+  { key: '3h', label: '3H' },
+  { key: '24h', label: '24H' },
+  { key: '7d', label: '7D' },
+  { key: '30d', label: '30D' }
+];
+
+export function AttentionChart({ 
+  indexData, 
+  onTimeframeChange,
+  currentTimeframe = '3h',
+  isLoading = false
+}: AttentionChartProps) {
+  
+  const processChartData = (transformedIndex: TransformedIndex): ChartDataPoint[] => {
+    const entries = Object.entries(transformedIndex);
     
-    days.forEach((day, index) => {
-      // Simulate organic growth with some volatility
-      const volatility = (Math.random() - 0.5) * 50;
-      const trendGrowth = index * 10; // General upward trend
-      const score = baseScore + trendGrowth + volatility;
-      
-      // Add events on specific days for fake data only
-      let hasEvent = false;
-      let eventData = null;
-      
-      if (!isRealTimeMode) {
-        if (index === 2) { // Wednesday - Viral TikTok
-          hasEvent = true;
-          eventData = { name: "Viral TikTok", impact: "+8.7%" };
-        } else if (index === 5) { // Saturday - Album announcement
-          hasEvent = true;
-          eventData = { name: "Album Release", impact: "+15.2%" };
+    return entries
+      .map(([timestamp, data]) => {
+        const date = new Date(timestamp);
+        
+        let timeFormat: string;
+        if (currentTimeframe === '3h' || currentTimeframe === '24h') {
+          timeFormat = date.toLocaleTimeString('en-US', { 
+            hour: '2-digit', 
+            minute: '2-digit',
+            hour12: false 
+          });
+        } else {
+          timeFormat = date.toLocaleDateString('en-US', { 
+            month: 'short', 
+            day: 'numeric' 
+          });
         }
-      }
-      
-      data.push({
-        day,
-        score: Math.round(score),
-        hasEvent,
-        eventData
-      });
-      
-      baseScore = score;
-    });
-    
-    return data;
+        
+        return {
+          timestamp,
+          time: timeFormat,
+          score: data.value || 0,
+          date
+        };
+      })
+      .sort((a, b) => a.date.getTime() - b.date.getTime());
   };
 
-  // Transform real-time Twitter data to chart format
-  const transformRealTimeData = (data: AttentionDataPoint[]): ChartDataPoint[] => {
-    return data.map((point) => {
-      const date = new Date(point.timestamp);
-      const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
-      const timeLabel = date.toLocaleTimeString('en-US', { 
-        hour: '2-digit', 
-        minute: '2-digit',
-        hour12: false 
-      });
-      
-      return {
-        day: `${dayName} ${timeLabel}`,
-        score: point.score,
-        tweet_count: point.tweet_count,
-        timestamp: point.timestamp,
-        hasEvent: false, // No events for real-time data
-        eventData: null
-      };
-    });
-  };
+  const chartData = indexData?.filtered_transformed_index 
+    ? processChartData(indexData.filtered_transformed_index)
+    : [];
 
-  // Use real-time data if available and in real-time mode, otherwise use fake data
-  const chartData = isRealTimeMode && realTimeData.length > 0 
-    ? transformRealTimeData(realTimeData)
-    : generateFakeAttentionData();
-
-  const CustomTooltip = ({ active, payload, label }: any) => {
+  const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
-      if (!data) return null;
-      
       return (
-        <div className="bg-white p-4 border border-gray-200 rounded-lg shadow-lg">
-          <p className="font-medium mb-2">{label}</p>
-          <div className="space-y-1 text-sm">
-            <p className="text-blue-600">
-              <span className="font-medium">{data.score || 0}</span>
-            </p>
-            {data.hasEvent && data.eventData && (
-              <div className="mt-2 pt-2 border-t border-gray-200">
-                <p className="font-medium text-red-600">{data.eventData.name}</p>
-                <p className="text-green-600">{data.eventData.impact}</p>
-              </div>
-            )}
-          </div>
+        <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
+          <p className="text-sm font-medium text-gray-900">{`Score: ${payload[0].value.toFixed(1)}`}</p>
+          <p className="text-xs text-gray-500">{data.timestamp}</p>
         </div>
       );
     }
     return null;
   };
 
-  const EventDot = (props: any) => {
-    const { cx, cy, payload } = props;
-    if (!payload || !payload.hasEvent || isRealTimeMode) return null; // No event dots for real-time data
-    
+  if (isLoading) {
     return (
-      <g>
-        <circle 
-          cx={cx} 
-          cy={cy} 
-          r={6} 
-          fill="#ef4444" 
-          stroke="#ffffff" 
-          strokeWidth={2}
-        />
-        <text 
-          x={cx} 
-          y={cy - 25} 
-          textAnchor="middle" 
-          fontSize={12} 
-          fill="#ef4444"
-          fontWeight="bold"
-        >
-          Event
-        </text>
-      </g>
+      <div className="h-64 flex flex-col items-center justify-center mt-10">
+        <RefreshCw className="w-8 h-8 animate-spin mb-4 text-muted-foreground" />
+        <div className="text-gray-500">Loading chart data...</div>
+      </div>
     );
-  };
+  }
 
   return (
-    <div className="h-80 w-full">
-      <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 0 }}>
-          <XAxis 
-            dataKey="day" 
-            axisLine={false}
-            tickLine={false}
-            tick={{ fontSize: 12, fill: '#6b7280' }}
-            dy={10}
-          />
-          <YAxis 
-            axisLine={false}
-            tickLine={false}
-            tick={{ fontSize: 12, fill: '#6b7280' }}
-          />
-          <Tooltip content={<CustomTooltip />} />
-          
-          <Line 
-            type="monotone" 
-            dataKey="score" 
-            stroke="#3b82f6" 
-            strokeWidth={3}
-            name="Total Attention Score"
-            dot={{ fill: '#3b82f6', strokeWidth: 2, r: 4 }}
-            activeDot={{ r: 6, stroke: '#3b82f6', strokeWidth: 2 }}
-          />
-          
-          {/* Event markers - only for fake data */}
-          {!isRealTimeMode && (
-            <Line 
-              type="monotone" 
-              dataKey="score" 
-              stroke="transparent"
-              dot={(props) => <EventDot {...props} />}
-              activeDot={false}
-              connectNulls={false}
-            />
-          )}
-        </LineChart>
-      </ResponsiveContainer>
+    <div>
+      <div className="h-70 w-100 mr-7">
+        {chartData.length > 0 ? (
+          <ResponsiveContainer width="100%" aspect={2}>
+            <LineChart data={chartData}>
+              <XAxis 
+                dataKey="time"
+                axisLine={false}
+                tickLine={false}
+                tickMargin={10}
+                tick={{ fontSize: 12, fill: '#6B7280' }}
+              />
+              <YAxis 
+                axisLine={false}
+                tickLine={false}
+                tickMargin={25}
+                tick={{ fontSize: 12, fill: '#6B7280' }}
+                allowDecimals={false}
+                domain={[
+                  (dataMin: number) => Math.floor((dataMin - 20) / 5) * 5,
+                  (dataMax: number) => Math.ceil((dataMax + 20) / 5) * 5,
+                ]}
+              />
+              <Tooltip content={<CustomTooltip />} />
+              <Line 
+                type="monotone" 
+                dataKey="score" 
+                stroke="#3B82F6" 
+                strokeWidth={2}
+                dot={false}
+                activeDot={{ r: 4, fill: '#3B82F6' }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        ) : (
+          <div className="h-full flex items-center justify-center">
+            <div className="text-gray-500">No data available for this timeframe</div>
+          </div>
+        )}
+      </div>
+      <div className="flex items-center gap-2 ml-2 mt-5">
+        {TIMEFRAMES.map((timeframe) => (
+          <Button
+            key={timeframe.key}
+            variant={currentTimeframe === timeframe.key ? "default" : "outline"}
+            size="sm"
+            onClick={() => onTimeframeChange?.(timeframe.key)}
+            className="h-8 px-3"
+          >
+            {timeframe.label}
+          </Button>
+        ))}
+      </div>
     </div>
   );
 }

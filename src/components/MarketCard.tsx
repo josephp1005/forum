@@ -2,10 +2,10 @@ import { Card } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { TrendingUp, TrendingDown } from "lucide-react";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
-import { MarketWithCalculatedFields } from "../types/market";
+import { MarketWithCalculatedFields, MarketSummaryWithCalculatedFields } from "../types/market";
 
 interface MarketCardProps {
-  market: MarketWithCalculatedFields;
+  market: MarketWithCalculatedFields | MarketSummaryWithCalculatedFields;
   onClick?: (marketId: number) => void;
 }
 
@@ -24,12 +24,6 @@ export function MarketCard({
     }
     return `$${volume.toFixed(0)}`;
   };
-
-  // Generate placeholder image based on market name
-  const getMarketImage = (name: string) => {
-    // For now, use a placeholder - later you can add real images
-    return `https://via.placeholder.com/48x48/6366f1/ffffff?text=${name.charAt(0)}`;
-  };
   
   return (
     <Card 
@@ -37,13 +31,13 @@ export function MarketCard({
       onClick={() => onClick?.(market.id)}
     >
       <div className="flex items-start justify-between mb-3">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-1 pr-1">
           <ImageWithFallback 
-            src={getMarketImage(market.name)}
+            src={market.picture}
             alt={market.name}
             className="w-12 h-12 rounded-full object-cover"
           />
-          <div>
+          <div className="min-w-0 flex-1">
             <h3 className="font-semibold text-gray-900">{market.name}</h3>
             <p className="text-sm text-gray-500 capitalize">
               {market.category} • {market.sub_category}
@@ -79,8 +73,9 @@ export function MarketCard({
           <span>${market.index_price?.toFixed(2) || '0.00'}</span>
         </div>
         
-        <div className={`text-sm ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
-          Funding: {market.funding_rate?.toFixed(3) || '0.000'}%
+        <div className={`flex justify-between text-sm text-gray-600`}>
+          <span>Funding Rate</span>
+          <span>{market.funding_rate?.toFixed(3) || '0.000'}%</span>
         </div>
       </div>
     </Card>

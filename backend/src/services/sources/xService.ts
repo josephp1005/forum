@@ -8,6 +8,95 @@ export const fetchXPosts = async (sourceParams: { query: string }, newsFetchInte
     return posts;
 }
 
+export const standardizeXPosts = async (xData: any, sourceParams: any, timeframe: string): Promise<any[]> => {
+    const standardizedPosts: any[] = [];
+    
+    if (!xData || !xData.data || !Array.isArray(xData.data)) {
+        return standardizedPosts;
+    }
+
+    // Calculate timeframe cutoff for precise filtering
+    const now = new Date();
+    let cutoffTime: Date;
+    
+    const timeMatch = timeframe.match(/^(\d+)([mhd])$/);
+    if (!timeMatch) {
+        cutoffTime = new Date(now.getTime() - 24 * 60 * 60 * 1000); // Default to 24h
+    } else {
+        const [, amount, unit] = timeMatch;
+        const multiplier = parseInt(amount);
+        
+        switch (unit) {
+            case 'm':
+                cutoffTime = new Date(now.getTime() - multiplier * 60 * 1000);
+                break;
+            case 'h':
+                cutoffTime = new Date(now.getTime() - multiplier * 60 * 60 * 1000);
+                break;
+            case 'd':
+                cutoffTime = new Date(now.getTime() - multiplier * 24 * 60 * 60 * 1000);
+                break;
+            default:
+                cutoffTime = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+        }
+    }
+
+    // Get user info map for author lookup
+    const userMap: { [key: string]: any } = {};
+    if (xData.includes && xData.includes.users) {
+        for (const user of xData.includes.users) {
+            userMap[user.id] = user;
+        }
+    }
+
+    for (const tweet of xData.data) {
+        try {
+            // Filter by publication time
+            const tweetTime = new Date(tweet.created_at);
+            if (tweetTime < cutoffTime) {
+                continue;
+            }
+
+            // Get author information
+            const author = userMap[tweet.author_id];
+            const authorName = author ? `@${author.username}` : 'Unknown';
+
+            // Construct Twitter URL
+            const tweetUrl = `https://twitter.com/i/status/${tweet.id}`;
+
+            // Prepare metrics
+            const metrics = tweet.public_metrics ? {
+                likes: tweet.public_metrics.like_count || 0,
+                retweets: tweet.public_metrics.retweet_count || 0,
+                replies: tweet.public_metrics.reply_count || 0,
+                quotes: tweet.public_metrics.quote_count || 0,
+                bookmarks: tweet.public_metrics.bookmark_count || 0,
+                impressions: tweet.public_metrics.impression_count || 0
+            } : null;
+
+            standardizedPosts.push({
+                type: 'post',
+                time: tweet.created_at,
+                author: authorName,
+                source: 'X',
+                has_title: false,
+                title: null,
+                body: tweet.text || '',
+                url: tweetUrl,
+                metrics: metrics,
+                picture: sourceParams.picture || null,
+                id: 'x-' + tweet.id
+            });
+
+        } catch (error) {
+            console.error('Error standardizing X post:', error);
+            continue;
+        }
+    }
+
+    return standardizedPosts;
+};
+
 const getTweetCount = async (query: string): Promise<number> => {
     try {
         const bearerToken = process.env.TWITTER_BEARER_TOKEN;

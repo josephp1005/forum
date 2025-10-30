@@ -4,11 +4,260 @@ import { fetchYouTubeData } from './sources/youtubeService.js';
 import { fetchLastFmData } from './sources/lastFmService.js';
 import { fetchSpotifyData } from './sources/spotifyService.js';
 import { fetchDeezerData } from './sources/deezerService.js';
-import { fetchXData, fetchXPosts } from './sources/xService.js';
-import { fetchNewsApiData } from './sources/newsApiService.js';
-import { fetchRedditData } from './sources/redditService.js';
+import { fetchXData, fetchXPosts, standardizeXPosts } from './sources/xService.js';
+import { fetchNewsApiData, standardizeArticles } from './sources/newsApiService.js';
+import { fetchRedditData, standardizeRedditPosts } from './sources/redditService.js';
 
 const supabase = createClient(config.supabaseUrl, config.supabaseServiceRoleKey);
+
+// New function to fetch index data with timeframe filtering
+export const fetchIndexData = async (marketId: number, timeframe: string = '3h') => {
+    try {
+        // Get the index ID for this market
+        const indexId = await getIndexId(marketId);
+        
+        // Fetch the full index data
+        const { data: indexData, error } = await supabase
+            .from('indices')
+            .select('*')
+            .eq('id', indexId)
+            .single();
+
+        if (error) {
+            throw new Error(`Failed to fetch index data: ${error.message}`);
+        }
+
+        // Filter and process the transformed_index data based on timeframe
+        const filteredData = filterDataByTimeframe(indexData.transformed_index, timeframe);
+        
+        // Calculate metrics for the timeframe
+        const metrics = calculateMetrics(filteredData);
+
+        return {
+            ...indexData,
+            filtered_transformed_index: filteredData,
+            metrics,
+            timeframe
+        };
+
+    } catch (error) {
+        console.error('Error fetching index data:', error);
+        throw error;
+    }
+};
+
+// Helper function to filter data by timeframe
+const filterDataByTimeframe = (transformedIndex: any, timeframe: string) => {
+    if (!transformedIndex) return {};
+
+    const now = new Date();
+    let cutoffTime: Date;
+
+    switch (timeframe) {
+        case '3h':
+            cutoffTime = new Date(now.getTime() - 3 * 60 * 60 * 1000);
+            break;
+        case '24h':
+            cutoffTime = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+            break;
+        case '7d':
+            cutoffTime = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            break;
+        case '30d':
+            cutoffTime = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+            break;
+        default:
+            cutoffTime = new Date(now.getTime() - 3 * 60 * 60 * 1000); // Default to 3h
+    }
+
+    const filtered: any = {};
+    
+    for (const [timestamp, data] of Object.entries(transformedIndex)) {
+        const dataTime = new Date(timestamp);
+        if (dataTime >= cutoffTime) {
+            filtered[timestamp] = data;
+        }
+    }
+
+    return filtered;
+};
+
+// Helper function to calculate metrics from filtered data
+const calculateMetrics = (filteredData: any) => {
+    const entries = Object.entries(filteredData);
+    
+    if (entries.length === 0) {
+        return {
+            current: 0,
+            peak: 0,
+            change: 0,
+            changePercent: 0
+        };
+    }
+
+    // Sort by timestamp to get chronological order
+    entries.sort(([a], [b]) => new Date(a).getTime() - new Date(b).getTime());
+
+    const values = entries.map(([, data]: [string, any]) => data.value || 0);
+    const current = values[values.length - 1] || 0;
+    const peak = Math.max(...values);
+    const first = values[0] || 0;
+    
+    const change = current - first;
+    const changePercent = first !== 0 ? (change / first) * 100 : 0;
+
+    return {
+        current,
+        peak,
+        change,
+        changePercent: Number(changePercent.toFixed(2))
+    };
+};
+
+// New function to fetch narrative data with timeframe filtering
+export const fetchNarrativeData = async (marketId: number, timeframe: string = '1d') => {
+    try {
+        // Get the index ID for this market
+        const indexId = await getIndexId(marketId);
+        
+        // Fetch the index data including raw_news_data and news_query_params
+        const { data: indexData, error } = await supabase
+            .from('indices')
+            .select('raw_news_data, news_query_params')
+            .eq('id', indexId)
+            .single();
+
+        if (error) {
+            throw new Error(`Failed to fetch narrative data: ${error.message}`);
+        }
+
+        if (!indexData.raw_news_data || !indexData.news_query_params) {
+            return {
+                articles: [],
+                posts: [],
+                timeframe
+            };
+        }
+
+        // Filter raw news data by timeframe (first level filtering by timestamp)
+        const filteredNewsData = filterNewsByTimeframe(indexData.raw_news_data, timeframe);
+        
+        // Standardize and filter the data from each source
+        const standardizedData = await standardizeNarrativeData(
+            filteredNewsData,
+            indexData.news_query_params,
+            timeframe
+        );
+
+        return {
+            articles: standardizedData.articles,
+            posts: standardizedData.posts,
+            timeframe
+        };
+
+    } catch (error) {
+        console.error('Error fetching narrative data:', error);
+        throw error;
+    }
+};
+
+// Helper function to filter news data by timeframe (timestamp-based)
+const filterNewsByTimeframe = (rawNewsData: any, timeframe: string) => {
+    if (!rawNewsData) return {};
+
+    const now = new Date();
+    let cutoffTime: Date;
+
+    // Parse timeframe (supports formats like '1h', '24h', '1d', '7d', '30m', etc.)
+    const timeMatch = timeframe.match(/^(\d+)([mhd])$/);
+    if (!timeMatch) {
+        cutoffTime = new Date(now.getTime() - 24 * 60 * 60 * 1000); // Default to 24h
+    } else {
+        const [, amount, unit] = timeMatch;
+        const multiplier = parseInt(amount);
+        
+        switch (unit) {
+            case 'm': // minutes
+                cutoffTime = new Date(now.getTime() - multiplier * 60 * 1000);
+                break;
+            case 'h': // hours
+                cutoffTime = new Date(now.getTime() - multiplier * 60 * 60 * 1000);
+                break;
+            case 'd': // days
+                cutoffTime = new Date(now.getTime() - multiplier * 24 * 60 * 60 * 1000);
+                break;
+            default:
+                cutoffTime = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+        }
+    }
+
+    const filtered: any = {};
+    
+    for (const [timestamp, data] of Object.entries(rawNewsData)) {
+        const dataTime = new Date(timestamp);
+        if (dataTime >= cutoffTime) {
+            filtered[timestamp] = data;
+        }
+    }
+
+    return filtered;
+};
+
+// Helper function to standardize narrative data from all sources
+const standardizeNarrativeData = async (filteredNewsData: any, newsQueryParams: any, timeframe: string) => {
+    const articles: any[] = [];
+    const posts: any[] = [];
+
+    // Process each timestamp entry
+    for (const [timestamp, timestampData] of Object.entries(filteredNewsData)) {
+        for (const [source, sourceData] of Object.entries(timestampData as any)) {
+            const sourceParams = newsQueryParams[source];
+            if (!sourceParams) continue;
+
+            try {
+                // Will update these imports after creating the standardization functions
+                let standardizedItems: any[] = [];
+
+                switch (source) {
+                    case 'x':
+                        standardizedItems = await standardizeXPosts(sourceData, sourceParams, timeframe);
+                        break;
+                    case 'reddit':
+                        standardizedItems = await standardizeRedditPosts(Array.isArray(sourceData) ? sourceData : [], sourceParams, timeframe);
+                        break;
+                    case 'newsapi':
+                        standardizedItems = await standardizeArticles(sourceData, sourceParams, timeframe);
+                        break;
+                    default:
+                        console.warn(`Unknown narrative source: ${source}`);
+                        continue;
+                }
+
+                // Sort into articles and posts
+                for (const item of standardizedItems) {
+                    if (item.type === 'article') {
+                        if (!articles.find(a => a.id === item.id)) {
+                            articles.push(item);
+                        }
+                    } else if (item.type === 'post') {
+                        if (!posts.find(p => p.id === item.id)) {
+                            posts.push(item);
+                        }
+                    }
+                }
+
+            } catch (error) {
+                console.error(`Error standardizing data from ${source}:`, error);
+            }
+        }
+    }
+
+    // Sort by publication time (most recent first)
+    articles.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
+    posts.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
+
+    return { articles, posts };
+};
 
 const refreshAttentionIndex = async (market_id: number) => {
     // fetch the market category and sub-category
@@ -253,9 +502,19 @@ const appendToTransformedIndex = async (
         .update({ attention_query_params: updatedParams })
         .eq('id', indexId);
 
+    const { error: currPriceError } = await supabase
+        .from('indices')
+        .update({ current_price: indexThisTick.toFixed(2) })
+        .eq('id', indexId);
+
     if (updateError) {
         console.error('Error updating transformed index params:', updateError);
         throw updateError;
+    }
+
+    if (currPriceError) {
+        console.error('Error updating current price:', currPriceError);
+        throw currPriceError;
     }
 
     // append the new data point to the transformed index

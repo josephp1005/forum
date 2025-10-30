@@ -8,7 +8,15 @@ import { Badge } from "./components/ui/badge";
 import { Button } from "./components/ui/button";
 import { TrendingUp, TrendingDown, Activity, Plus } from "lucide-react";
 import { api } from "./services/api";
-import { Market, MarketWithCalculatedFields, enrichMarketData, MarketSubCategory } from "./types/market";
+import { 
+  MarketSummary, 
+  MarketSummaryWithCalculatedFields, 
+  Market,
+  MarketWithCalculatedFields,
+  enrichMarketSummaryData,
+  enrichMarketData,
+  MarketSubCategory 
+} from "./types/market";
 
 const mockMarkets = {
   trending: {
@@ -210,7 +218,7 @@ function App() {
   const [selectedMarket, setSelectedMarket] = useState<MarketWithCalculatedFields | null>(null);
   const [activeCategory, setActiveCategory] = useState("music");
   const [activeSubcategory, setActiveSubcategory] = useState<string>("");
-  const [markets, setMarkets] = useState<MarketWithCalculatedFields[]>([]);
+  const [markets, setMarkets] = useState<MarketSummaryWithCalculatedFields[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
@@ -229,7 +237,7 @@ function App() {
       setLoading(true);
       setError(null);
       const fetchedMarkets = await api.fetchMarkets();
-      const enrichedMarkets = fetchedMarkets.map(enrichMarketData);
+      const enrichedMarkets = fetchedMarkets.map(enrichMarketSummaryData);
       setMarkets(enrichedMarkets);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch markets');
@@ -256,10 +264,17 @@ function App() {
     return filtered;
   };
   
-  const handleMarketClick = (marketId: number) => {
-    const market = markets.find(m => m.id === marketId);
-    if (market) {
-      setSelectedMarket(market);
+  const handleMarketClick = async (marketId: number) => {
+    try {
+      setError(null);
+      
+      // Fetch full market data with complete index information
+      const fullMarket = await api.fetchFullMarket(marketId);
+      const enrichedMarket = enrichMarketData(fullMarket);
+      setSelectedMarket(enrichedMarket);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch market details');
+      console.error('Error fetching market details:', err);
     }
   };
   
@@ -307,7 +322,7 @@ function App() {
     }
     
     // Group markets by subcategory
-    const groupedMarkets: { [key: string]: MarketWithCalculatedFields[] } = {
+    const groupedMarkets: { [key: string]: MarketSummaryWithCalculatedFields[] } = {
       "All Markets": filteredMarkets
     };
     
@@ -318,7 +333,7 @@ function App() {
         if (!acc[key]) acc[key] = [];
         acc[key].push(market);
         return acc;
-      }, {} as { [key: string]: MarketWithCalculatedFields[] });
+      }, {} as { [key: string]: MarketSummaryWithCalculatedFields[] });
       
       Object.assign(groupedMarkets, bySubcategory);
     }
@@ -379,25 +394,25 @@ function App() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-500">Top Gainer</p>
-                  <p className="text-2xl font-bold text-gray-900">+6.05%</p>
+                  <p className="text-2xl font-bold text-gray-900">+5.6%</p>
                 </div>
                 <div className="text-green-600">
                   <TrendingUp className="w-8 h-8" />
                 </div>
               </div>
-              <p className="text-sm text-green-600 mt-2">Donald Trump</p>
+              <p className="text-sm text-green-600 mt-2">SOS</p>
             </Card>
             <Card className="p-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-500">Top Loser</p>
-                  <p className="text-2xl font-bold text-gray-900">-2.0%</p>
+                  <p className="text-2xl font-bold text-gray-900">-1.7%</p>
                 </div>
                 <div className="text-red-600">
                   <TrendingDown className="w-8 h-8" />
                 </div>
               </div>
-              <p className="text-sm text-red-600 mt-2">Patrick Mahomes</p>
+              <p className="text-sm text-red-600 mt-2">All The Stars</p>
             </Card>
             
             <Card className="p-6">
