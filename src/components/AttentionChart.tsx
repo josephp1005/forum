@@ -71,7 +71,7 @@ export function AttentionChart({
       const data = payload[0].payload;
       return (
         <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
-          <p className="text-sm font-medium text-gray-900">{`Score: ${payload[0].value.toFixed(1)}`}</p>
+          <p className="text-sm font-medium text-gray-900">{`Score: ${payload[0].value.toFixed(2)}`}</p>
           <p className="text-xs text-gray-500">{data.timestamp}</p>
         </div>
       );
@@ -106,10 +106,10 @@ export function AttentionChart({
                 tickLine={false}
                 tickMargin={25}
                 tick={{ fontSize: 12, fill: '#6B7280' }}
-                allowDecimals={false}
+                allowDecimals={true}
                 domain={[
-                  (dataMin: number) => Math.floor((dataMin - 20) / 5) * 5,
-                  (dataMax: number) => Math.ceil((dataMax + 20) / 5) * 5,
+                  (dataMin: number) => Math.floor(dataMin * 20) / 20,
+                  (dataMax: number) => Math.ceil(dataMax * 20) / 20,
                 ]}
               />
               <Tooltip content={<CustomTooltip />} />

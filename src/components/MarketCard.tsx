@@ -69,8 +69,8 @@ export function MarketCard({
         </div>
         
         <div className="flex justify-between text-sm text-gray-500">
-          <span>Index Price</span>
-          <span>${market.index_price?.toFixed(2) || '0.00'}</span>
+          <span>Index Score</span>
+          <span>{market.index_price?.toFixed(2) || '0.00'}</span>
         </div>
         
         <div className={`flex justify-between text-sm text-gray-600`}>

@@ -64,8 +64,8 @@ export function MarketDetail({ market, onBack }: MarketDetailProps) {
                   <p className="font-medium text-gray-900">22 min</p>
                 </div>
                 <div className="text-sm text-gray-500">
-                  <p>Index Price</p>
-                  <p className="font-medium text-gray-900">${market.index_price.toFixed(2)}</p>
+                  <p>Index Score</p>
+                  <p className="font-medium text-gray-900">{market.index_price.toFixed(2)}</p>
                 </div>
                 <div className="text-sm text-gray-500">
                   <p>Next Index Update</p>

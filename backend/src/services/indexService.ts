@@ -29,7 +29,15 @@ export const fetchIndexData = async (marketId: number, timeframe: string = '3h')
 
         // Filter and process the transformed_index data based on timeframe
         const filteredData = filterDataByTimeframe(indexData.transformed_index, timeframe);
-        
+
+        // apply a log scale to the data
+        const entries = Object.entries(filteredData) as [string, any][];
+        for (const [timestamp, data] of entries) {
+            if (data && typeof data.value === 'number') {
+                data.value = Math.log(data.value + 1);
+            }
+        }
+
         // Calculate metrics for the timeframe
         const metrics = calculateMetrics(filteredData);
 

@@ -70,7 +70,7 @@ export function IndexView({ market }: IndexViewProps) {
           <div className="flex items-center justify-between mb-0">
             <div className="flex items-center gap-3">
               <h3 className="font-semibold">
-                Attention Over Time
+                Score Chart
               </h3>
               {error && (
                 <div className="text-red-600 text-sm">{error}</div>
@@ -103,13 +103,13 @@ export function IndexView({ market }: IndexViewProps) {
           <div className="mt-0 grid grid-cols-3 gap-4 pt-4 border-t">
             <div className="text-center">
               <p className="text-lg font-bold text-gray-900">
-                {indexData?.metrics.current.toFixed(0) || market.index_price.toFixed(0)}
+                {indexData?.metrics.current.toFixed(2) || market.index_price.toFixed(0)}
               </p>
               <p className="text-xs text-gray-500">Current Score</p>
             </div>
             <div className="text-center">
               <p className="text-lg font-bold text-gray-900">
-                {indexData?.metrics.peak.toFixed(0) || '--'}
+                {indexData?.metrics.peak.toFixed(2) || '--'}
               </p>
               <p className="text-xs text-gray-500">Peak</p>
             </div>
@@ -129,7 +129,7 @@ export function IndexView({ market }: IndexViewProps) {
       {/* 2. Attention Sources (Top-Right, Scrollable) */}
       <div className="col-span-4 h-[600px]">
         <Card className="flex flex-col h-full p-4">
-          <h3 className="font-semibold mb-1">Attention Sources</h3>
+          <h3 className="font-semibold mb-1">Index Sources</h3>
           <div className="flex-1 overflow-y-auto max-h-[400px]">
             <AttentionSources 
               indexData={indexData || undefined}
