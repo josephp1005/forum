@@ -229,17 +229,17 @@ const appendToTransformedIndex = async (
     for (const [src, x] of Object.entries(baseBySource)) {
         updatedParams[src] = updatedParams[src] || {};
 
-        const hadOffset = typeof updatedParams[src].rebase_offset === "number";
+        const hadOffset = typeof updatedParams[src].rebase_scale === "number";
         if (rebaseSources.includes(src)) {
             // one-time offset: c = baseline - x (or 0 if no baseline yet)
-            const c = baselineIndex === null ? 0 : baselineIndex - x;
-            updatedParams[src].rebase_offset = c;
+            const c = baselineIndex === null ? 1 : baselineIndex / x;
+            updatedParams[src].rebase_scale = c;
         } else if (!hadOffset) {
-            updatedParams[src].rebase_offset = 0;
+            updatedParams[src].rebase_scale = 1;
         }
 
-        const c = updatedParams[src].rebase_offset || 0;
-        usedValues[src] = x + c; // this is the value used in the average
+        const c = updatedParams[src].rebase_scale || 1;
+        usedValues[src] = x * c; // this is the value used in the average
     }
 
     // final index value = average of all per-source used values
